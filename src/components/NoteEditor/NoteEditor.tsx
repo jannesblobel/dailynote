@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatDateDisplay, isToday } from '../../utils/date';
 import { sanitizeHtml } from '../../utils/sanitize';
 
@@ -10,8 +10,32 @@ interface NoteEditorProps {
 
 export function NoteEditor({ date, content, onChange }: NoteEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const idleTimerRef = useRef<number | null>(null);
+  const hideTimerRef = useRef<number | null>(null);
   const isEditable = isToday(date);
   const formattedDate = formatDateDisplay(date);
+  const [showSaving, setShowSaving] = useState(false);
+
+  const scheduleSavingIndicator = useCallback(() => {
+    if (!isEditable) {
+      return;
+    }
+
+    if (idleTimerRef.current !== null) {
+      window.clearTimeout(idleTimerRef.current);
+    }
+    if (hideTimerRef.current !== null) {
+      window.clearTimeout(hideTimerRef.current);
+    }
+
+    setShowSaving(false);
+    idleTimerRef.current = window.setTimeout(() => {
+      setShowSaving(true);
+      hideTimerRef.current = window.setTimeout(() => {
+        setShowSaving(false);
+      }, 1200);
+    }, 2000);
+  }, [isEditable]);
 
   // Handle content changes from contentEditable
   const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
@@ -19,7 +43,8 @@ export function NoteEditor({ date, content, onChange }: NoteEditorProps) {
     // Sanitize immediately on input
     const sanitized = sanitizeHtml(html);
     onChange(sanitized);
-  }, [onChange]);
+    scheduleSavingIndicator();
+  }, [onChange, scheduleSavingIndicator]);
 
   // Update contentEditable when content prop changes
   useEffect(() => {
@@ -47,6 +72,27 @@ export function NoteEditor({ date, content, onChange }: NoteEditorProps) {
     }
   }, [isEditable]);
 
+  useEffect(() => {
+    if (!isEditable) {
+      if (idleTimerRef.current !== null) {
+        window.clearTimeout(idleTimerRef.current);
+      }
+      if (hideTimerRef.current !== null) {
+        window.clearTimeout(hideTimerRef.current);
+      }
+      setShowSaving(false);
+    }
+
+    return () => {
+      if (idleTimerRef.current !== null) {
+        window.clearTimeout(idleTimerRef.current);
+      }
+      if (hideTimerRef.current !== null) {
+        window.clearTimeout(hideTimerRef.current);
+      }
+    };
+  }, [isEditable]);
+
   // Handle paste - sanitize pasted content
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -60,7 +106,8 @@ export function NoteEditor({ date, content, onChange }: NoteEditorProps) {
 
     // Insert at cursor position
     document.execCommand('insertHTML', false, contentToPaste);
-  }, []);
+    scheduleSavingIndicator();
+  }, [scheduleSavingIndicator]);
 
   return (
     <div className="note-editor">
@@ -71,6 +118,9 @@ export function NoteEditor({ date, content, onChange }: NoteEditorProps) {
             <span className="note-editor__readonly-badge">Read only</span>
           )}
         </div>
+        {isEditable && showSaving && (
+          <span className="note-editor__saving">Saving...</span>
+        )}
       </div>
       <div className="note-editor__body">
         <div

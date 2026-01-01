@@ -321,6 +321,13 @@
   margin-left: var(--spacing-sm);
 }
 
+.note-editor__saving {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  opacity: 0.8;
+  transition: opacity 150ms ease;
+}
+
 .note-editor__body {
   flex: 1;
   display: flex;
