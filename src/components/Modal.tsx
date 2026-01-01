@@ -1,4 +1,5 @@
 import { useEffect, useCallback, type ReactNode } from 'react';
+import { Button } from './Button';
 
 interface ModalProps {
   isOpen: boolean;
@@ -35,6 +36,14 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
 
   return (
     <div className="modal-backdrop" onClick={handleBackdropClick}>
+      <Button
+        className="modal-close-button"
+        icon
+        onClick={onClose}
+        aria-label="Close"
+      >
+        ✕
+      </Button>
       <div className="modal-content">
         {children}
       </div>

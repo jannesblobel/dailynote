@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Button } from '../Button';
 import { formatDateDisplay, isToday } from '../../utils/date';
 
 interface NoteEditorProps {
   date: string;
   content: string;
   onChange: (content: string) => void;
-  onClose: () => void;
 }
 
-export function NoteEditor({ date, content, onChange, onClose }: NoteEditorProps) {
+export function NoteEditor({ date, content, onChange }: NoteEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEditable = isToday(date);
   const formattedDate = formatDateDisplay(date);
@@ -34,9 +32,6 @@ export function NoteEditor({ date, content, onChange, onClose }: NoteEditorProps
             <span className="note-editor__readonly-badge">Read only</span>
           )}
         </div>
-        <Button icon onClick={onClose} aria-label="Close">
-          ✕
-        </Button>
       </div>
       <div className="note-editor__body">
         <textarea
