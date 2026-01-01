@@ -5,7 +5,6 @@ import { useCloudPrompt } from './useCloudPrompt';
 import { AppMode } from '../utils/appMode';
 
 export { AppMode } from '../utils/appMode';
-export type { AppMode } from '../utils/appMode';
 
 const CLOUD_PROMPT_KEY = `${STORAGE_PREFIX}cloud_prompted_v1`;
 
