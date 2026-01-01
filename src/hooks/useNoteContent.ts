@@ -8,6 +8,7 @@ interface UseNoteContentReturn {
   content: string;
   setContent: (content: string) => void;
   isDecrypting: boolean;
+  hasEdits: boolean;
 }
 
 export function useNoteContent(
@@ -17,15 +18,18 @@ export function useNoteContent(
 ): UseNoteContentReturn {
   const [content, setContentState] = useState('');
   const [isDecrypting, setIsDecrypting] = useState(false);
+  const [hasEdits, setHasEdits] = useState(false);
   const saveTimeoutRef = useRef<number | null>(null);
   const pendingSaveRef = useRef<Promise<void> | null>(null);
   const latestContentRef = useRef('');
   const shouldDelayDecryptRef = useRef(true);
 
   useEffect(() => {
+    setHasEdits(false);
     if (!date || !repository) {
       setContentState('');
       setIsDecrypting(false);
+      latestContentRef.current = '';
       return;
     }
     let cancelled = false;
@@ -36,7 +40,9 @@ export function useNoteContent(
       try {
         const note = await repository.get(date);
         if (!cancelled) {
-          setContentState(note?.content ?? '');
+          const nextContent = note?.content ?? '';
+          setContentState(nextContent);
+          latestContentRef.current = nextContent;
         }
       } finally {
         if (shouldDelayDecryptRef.current) {
@@ -73,6 +79,9 @@ export function useNoteContent(
 
   const setContent = useCallback((newContent: string) => {
     if (!date || !repository) return;
+    if (newContent !== latestContentRef.current) {
+      setHasEdits(true);
+    }
     latestContentRef.current = newContent;
     setContentState(newContent);
 
@@ -99,6 +108,7 @@ export function useNoteContent(
   return {
     content,
     setContent,
-    isDecrypting
+    isDecrypting,
+    hasEdits
   };
 }

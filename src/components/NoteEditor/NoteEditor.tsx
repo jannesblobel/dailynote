@@ -9,6 +9,7 @@ interface NoteEditorProps {
   content: string;
   onChange: (content: string) => void;
   isClosing: boolean;
+  hasEdits: boolean;
   isDecrypting?: boolean;
 }
 
@@ -17,6 +18,7 @@ export function NoteEditor({
   content,
   onChange,
   isClosing,
+  hasEdits,
   isDecrypting = false
 }: NoteEditorProps) {
   const canEdit = canEditNote(date);
@@ -27,7 +29,7 @@ export function NoteEditor({
 
   const statusText = isDecrypting
     ? 'Decrypting...'
-    : isEditable && (showSaving || isClosing)
+    : isEditable && (showSaving || (isClosing && hasEdits))
       ? 'Saving...'
       : null;
   const { editorRef, handleInput, handlePaste } = useContentEditable({

@@ -4,7 +4,7 @@ import { useNoteContent } from './useNoteContent';
 import { useNoteDates } from './useNoteDates';
 import { useSync } from './useSync';
 import { supabase } from '../lib/supabase';
-import { createSyncedNoteRepository } from '../storage/syncedNoteRepository';
+import { createLocalSyncedNoteRepository, createSyncedNoteRepository } from '../storage/syncedNoteRepository';
 import { createEncryptedNoteRepository } from '../storage/noteStorage';
 import type { SyncedNoteRepository } from '../storage/syncedNoteRepository';
 import type { NoteRepository } from '../storage/noteRepository';
@@ -15,6 +15,7 @@ interface UseNoteRepositoryProps {
   mode: AppMode;
   authUser: User | null;
   vaultKey: CryptoKey | null;
+  cloudCacheKey: CryptoKey | null;
   date: string | null;
   year: number;
 }
@@ -26,6 +27,7 @@ export interface UseNoteRepositoryReturn {
   triggerSync: ReturnType<typeof useSync>['triggerSync'];
   content: string;
   setContent: (content: string) => void;
+  hasEdits: boolean;
   hasNote: (date: string) => boolean;
   noteDates: Set<string>;
   refreshNoteDates: (options?: { immediate?: boolean }) => void;
@@ -36,18 +38,24 @@ export function useNoteRepository({
   mode,
   authUser,
   vaultKey,
+  cloudCacheKey,
   date,
   year
 }: UseNoteRepositoryProps): UseNoteRepositoryReturn {
   const repository = useMemo<NoteRepository | SyncedNoteRepository | null>(() => {
-    if (!vaultKey) return null;
-
     if (mode === AppMode.Cloud && authUser) {
+      if (!vaultKey) return null;
       return createSyncedNoteRepository(supabase, authUser.id, vaultKey);
     }
 
+    if (cloudCacheKey && (!authUser || mode === AppMode.Local)) {
+      return createLocalSyncedNoteRepository(cloudCacheKey);
+    }
+
+    if (!vaultKey) return null;
+
     return createEncryptedNoteRepository(vaultKey);
-  }, [mode, authUser, vaultKey]);
+  }, [mode, authUser, vaultKey, cloudCacheKey]);
 
   const syncedRepo = mode === AppMode.Cloud ? repository as SyncedNoteRepository : null;
   const { syncStatus, triggerSync } = useSync(syncedRepo);
@@ -75,7 +83,8 @@ export function useNoteRepository({
   const {
     content,
     setContent,
-    isDecrypting
+    isDecrypting,
+    hasEdits
   } = useNoteContent(date, repository, handleAfterSave);
 
   useEffect(() => {
@@ -91,6 +100,7 @@ export function useNoteRepository({
     triggerSync,
     content,
     setContent,
+    hasEdits,
     hasNote,
     noteDates,
     refreshNoteDates,

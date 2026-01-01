@@ -47,6 +47,12 @@ To avoid typing the password on every visit, the DEK can be wrapped with a **dev
 - The DEK is wrapped with the device key and stored locally (`storeDeviceWrappedDEK`).
 - On sign-in, the app first tries to unwrap the DEK with the device key (`tryUnlockWithDeviceDEK`).
 
+## Local vault vs cloud DEK
+- Local-only notes (`dailynotes-notes`) are encrypted with the local vault key.
+- Synced cache notes (`dailynotes-synced`) are encrypted with the cloud DEK.
+- If you sign in after creating local notes, the cloud DEK can reuse the local vault key.
+- If you sign in to an existing account (or after clearing local data), the cloud DEK is distinct, so the two stores can be encrypted with different keys.
+
 ### What if the device is cleared?
 
 If browser data is cleared (IndexedDB/local storage wiped):

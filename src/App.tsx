@@ -31,6 +31,7 @@ function App() {
     mode: appMode.mode,
     authUser: auth.user,
     vaultKey: activeVault.vaultKey,
+    cloudCacheKey: activeVault.cachedCloudVaultKey,
     date,
     year
   });

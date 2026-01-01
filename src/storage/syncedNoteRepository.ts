@@ -491,3 +491,102 @@ export function createSyncedNoteRepository(
     }
   };
 }
+
+export function createLocalSyncedNoteRepository(
+  vaultKey: CryptoKey
+): SyncedNoteRepository {
+  let syncStatus: SyncStatus = SyncStatus.Idle;
+  const statusListeners = new Set<(status: SyncStatus) => void>();
+
+  const setSyncStatus = (status: SyncStatus) => {
+    syncStatus = status;
+    statusListeners.forEach((cb) => cb(status));
+  };
+
+  const sync = async (): Promise<void> => {
+    setSyncStatus(SyncStatus.Idle);
+  };
+
+  return {
+    async get(date: string): Promise<Note | null> {
+      const local = await getLocalNote(date);
+      if (!local || local.deleted) return null;
+      const note = await decryptFromLocal(vaultKey, local);
+      return {
+        date: note.date,
+        content: note.content,
+        updatedAt: note.updatedAt
+      };
+    },
+
+    async save(date: string, content: string): Promise<void> {
+      const sanitizedContent = sanitizeHtml(content);
+      const existing = await getLocalNote(date);
+
+      const note: SyncedNote = {
+        id: existing?.id,
+        date,
+        content: sanitizedContent,
+        updatedAt: new Date().toISOString(),
+        revision: (existing?.revision ?? 0) + 1,
+        serverUpdatedAt: existing?.serverUpdatedAt,
+        deleted: false
+      };
+
+      const payload = await encryptForLocal(vaultKey, note);
+      payload.dirty = true;
+      await setLocalNote(date, payload);
+    },
+
+    async saveWithMetadata(note: SyncedNote): Promise<void> {
+      const sanitizedContent = sanitizeHtml(note.content);
+      const payload = await encryptForLocal(vaultKey, {
+        ...note,
+        content: sanitizedContent
+      });
+      payload.dirty = true;
+      await setLocalNote(note.date, payload);
+    },
+
+    async delete(date: string): Promise<void> {
+      const existing = await getLocalNote(date);
+      if (!existing) return;
+
+      if (existing.id) {
+        existing.deleted = true;
+        existing.dirty = true;
+        existing.updatedAt = new Date().toISOString();
+        existing.revision += 1;
+        await setLocalNote(date, existing);
+      } else {
+        await deleteLocalNote(date);
+      }
+    },
+
+    async getAllDates(): Promise<string[]> {
+      const localNotes = await getAllLocalNotes();
+      return Array.from(localNotes.entries())
+        .filter(([, note]) => !note.deleted)
+        .map(([date]) => date);
+    },
+
+    async getAllDatesForYear(year: number): Promise<string[]> {
+      const localNotes = await getAllLocalNotes();
+      return Array.from(localNotes.entries())
+        .filter(([, note]) => !note.deleted)
+        .map(([date]) => date)
+        .filter((date) => date.slice(-4) === String(year));
+    },
+
+    sync,
+
+    getSyncStatus(): SyncStatus {
+      return syncStatus;
+    },
+
+    onSyncStatusChange(callback: (status: SyncStatus) => void): () => void {
+      statusListeners.add(callback);
+      return () => statusListeners.delete(callback);
+    }
+  };
+}

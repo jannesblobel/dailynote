@@ -40,6 +40,7 @@ export function AppModals() {
     content,
     setContent,
     isDecrypting,
+    hasEdits,
     noteDates,
     triggerSync
   } = useNoteRepositoryContext();
@@ -57,14 +58,14 @@ export function AppModals() {
   const handleCloseComplete = useCallback(() => {
     const hasLocalNote = noteDates.size > 0 || !isContentEmpty(content);
     const shouldPromptModeChoice = mode === AppMode.Local && hasLocalNote;
-    if (mode === AppMode.Cloud) {
+    if (mode === AppMode.Cloud && hasEdits) {
       triggerSync({ immediate: true });
     }
     navigateToCalendar(year);
     if (shouldPromptModeChoice) {
       requestModeChoice();
     }
-  }, [content, mode, navigateToCalendar, noteDates.size, requestModeChoice, triggerSync, year]);
+  }, [content, hasEdits, mode, navigateToCalendar, noteDates.size, requestModeChoice, triggerSync, year]);
 
   const {
     showContent: showModalContent,
@@ -75,7 +76,7 @@ export function AppModals() {
     onCloseComplete: handleCloseComplete,
     openDelayMs: 100,
     resetDelayMs: 0,
-    closeDelayMs: 200
+    closeDelayMs: hasEdits ? 200 : 0
   });
 
   useEffect(() => {
@@ -116,6 +117,8 @@ export function AppModals() {
     );
 
   const showModeChoice = isModeChoiceOpen && !showIntro;
+
+  const shouldRenderNoteEditor = isNoteModalOpen && (showModalContent || isClosing);
 
   return (
     <>
@@ -241,12 +244,13 @@ export function AppModals() {
       </Modal>
 
       <Modal isOpen={isNoteModalOpen} onClose={handleCloseModal}>
-        {date && showModalContent && (
+        {date && shouldRenderNoteEditor && (
           <NoteEditor
             date={date}
             content={isDecrypting ? '' : content}
             onChange={setContent}
             isClosing={isClosing}
+            hasEdits={hasEdits}
             isDecrypting={isDecrypting}
           />
         )}

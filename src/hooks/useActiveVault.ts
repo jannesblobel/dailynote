@@ -1,8 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { UseAuthReturn } from './useAuth';
 import { useLocalVault } from './useLocalVault';
 import { useVault } from './useVault';
 import { AppMode } from './useAppMode';
+import { tryUnlockWithDeviceDEK } from '../storage/vault';
+import { cacheCloudDek, restoreCloudDek } from '../storage/cloudCache';
 
 interface UseActiveVaultProps {
   auth: UseAuthReturn;
@@ -16,6 +18,7 @@ export interface UseActiveVaultReturn {
   cloudVault: ReturnType<typeof useVault>;
   authPassword: string | null;
   localPassword: string | null;
+  cachedCloudVaultKey: CryptoKey | null;
   vaultKey: CryptoKey | null;
   isVaultReady: boolean;
   isVaultLocked: boolean;
@@ -32,6 +35,7 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
   const localVault = useLocalVault();
   const [authPassword, setAuthPassword] = useState<string | null>(null);
   const [localPassword, setLocalPassword] = useState<string | null>(null);
+  const [restoredCloudVaultKey, setRestoredCloudVaultKey] = useState<CryptoKey | null>(null);
 
   const handlePasswordConsumed = useCallback(() => {
     setAuthPassword(null);
@@ -43,6 +47,37 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
     localDek: localVault.vaultKey,
     onPasswordConsumed: handlePasswordConsumed
   });
+
+  const cachedCloudVaultKey = cloudVault.vaultKey ?? restoredCloudVaultKey;
+
+  useEffect(() => {
+    if (cloudVault.vaultKey || restoredCloudVaultKey) return;
+    let cancelled = false;
+
+    const restoreCloudKey = async () => {
+      const dek = await tryUnlockWithDeviceDEK();
+      if (!cancelled && dek) {
+        setRestoredCloudVaultKey(dek);
+        return;
+      }
+      if (cancelled || !localVault.vaultKey) return;
+      const restored = await restoreCloudDek(localVault.vaultKey);
+      if (!cancelled && restored) {
+        setRestoredCloudVaultKey(restored);
+      }
+    };
+
+    void restoreCloudKey();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cloudVault.vaultKey, localVault.vaultKey, restoredCloudVaultKey]);
+
+  useEffect(() => {
+    if (!cloudVault.vaultKey || !localVault.vaultKey) return;
+    void cacheCloudDek(localVault.vaultKey, cloudVault.vaultKey);
+  }, [cloudVault.vaultKey, localVault.vaultKey]);
 
   const vaultKey = mode === AppMode.Cloud ? cloudVault.vaultKey : localVault.vaultKey;
   const isVaultReady = mode === AppMode.Cloud ? cloudVault.isReady : localVault.isReady;
@@ -86,6 +121,7 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
     cloudVault,
     authPassword,
     localPassword,
+    cachedCloudVaultKey,
     vaultKey,
     isVaultReady,
     isVaultLocked,

@@ -12,7 +12,6 @@ import {
   DEFAULT_KDF_ITERATIONS,
   storeDeviceWrappedDEK,
   tryUnlockWithDeviceDEK,
-  clearDeviceWrappedDEK,
   updatePasswordWrappedKey
 } from '../storage/vault';
 
@@ -138,7 +137,6 @@ export function useVault({
   // Clear vault on sign out
   const clearVault = useCallback(async () => {
     setVaultKey(null);
-    await clearDeviceWrappedDEK();
   }, []);
 
   // Listen for sign out
