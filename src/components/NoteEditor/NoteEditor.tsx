@@ -6,9 +6,10 @@ interface NoteEditorProps {
   date: string;
   content: string;
   onChange: (content: string) => void;
+  isClosing: boolean;
 }
 
-export function NoteEditor({ date, content, onChange }: NoteEditorProps) {
+export function NoteEditor({ date, content, onChange, isClosing }: NoteEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const idleTimerRef = useRef<number | null>(null);
   const hideTimerRef = useRef<number | null>(null);
@@ -118,7 +119,7 @@ export function NoteEditor({ date, content, onChange }: NoteEditorProps) {
             <span className="note-editor__readonly-badge">Read only</span>
           )}
         </div>
-        {isEditable && showSaving && (
+        {isEditable && (showSaving || isClosing) && (
           <span className="note-editor__saving">Saving...</span>
         )}
       </div>

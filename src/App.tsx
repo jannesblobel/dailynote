@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Calendar } from './components/Calendar';
 import { Modal } from './components/Modal';
 import { NoteEditor } from './components/NoteEditor';
@@ -14,9 +15,28 @@ function App() {
 
   const isModalOpen = view === 'note' && date !== null;
 
-  const handleCloseModal = () => {
-    navigateToCalendar(year);
-  };
+  const [isClosing, setIsClosing] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
+
+  const handleCloseModal = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+    }
+
+    setIsClosing(true);
+    closeTimerRef.current = window.setTimeout(() => {
+      setIsClosing(false);
+      navigateToCalendar(year);
+    }, 300);
+  }, [navigateToCalendar, year]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -33,7 +53,7 @@ function App() {
             date={date}
             content={content}
             onChange={setContent}
-            onClose={handleCloseModal}
+            isClosing={isClosing}
           />
         )}
       </Modal>
