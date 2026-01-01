@@ -8,6 +8,7 @@ import {
   formatDate,
   getDayCellState
 } from '../../utils/date';
+import { DayCellState } from '../../types';
 
 interface MonthGridProps {
   year: number;
@@ -52,7 +53,7 @@ export function MonthGrid({ year, month, hasNote, onDayClick }: MonthGridProps) 
       <div className="month-grid__days">
         {days.map((cell, index) => {
           if (cell.day === null || cell.date === null) {
-            return <DayCell key={index} day={null} state="empty" hasNote={false} />;
+            return <DayCell key={index} day={null} state={DayCellState.Empty} hasNote={false} />;
           }
 
           const dateStr = formatDate(cell.date);

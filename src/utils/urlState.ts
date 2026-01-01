@@ -1,4 +1,4 @@
-import type { UrlState } from '../types';
+import { ViewType, type UrlState } from '../types';
 import { URL_PARAMS } from './constants';
 import { getTodayString, isFuture, parseDate } from './date';
 
@@ -17,7 +17,7 @@ export function resolveUrlState(search: string): ResolvedUrlState {
     const yearParam = params.get(URL_PARAMS.YEAR);
     const year = parseInt(yearParam ?? '', 10) || currentYear;
     return {
-      state: { view: 'calendar', date: null, year },
+      state: { view: ViewType.Calendar, date: null, year },
       canonicalSearch: `?${URL_PARAMS.YEAR}=${year}`,
       needsRedirect: false
     };
@@ -28,28 +28,28 @@ export function resolveUrlState(search: string): ResolvedUrlState {
     const parsed = parseDate(dateParam);
     if (parsed && !isFuture(dateParam)) {
       return {
-        state: { view: 'note', date: dateParam, year: parsed.getFullYear() },
+        state: { view: ViewType.Note, date: dateParam, year: parsed.getFullYear() },
         canonicalSearch: `?${URL_PARAMS.DATE}=${dateParam}`,
         needsRedirect: false
       };
     }
 
     return {
-      state: { view: 'note', date: today, year: currentYear },
+      state: { view: ViewType.Note, date: today, year: currentYear },
       canonicalSearch: `?${URL_PARAMS.DATE}=${today}`,
       needsRedirect: true
     };
   }
 
   return {
-    state: { view: 'note', date: today, year: currentYear },
+    state: { view: ViewType.Note, date: today, year: currentYear },
     canonicalSearch: `?${URL_PARAMS.DATE}=${today}`,
     needsRedirect: true
   };
 }
 
 export function serializeUrlState(state: UrlState): string {
-  if (state.view === 'calendar') {
+  if (state.view === ViewType.Calendar) {
     return `?${URL_PARAMS.YEAR}=${state.year}`;
   }
 

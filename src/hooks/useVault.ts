@@ -16,7 +16,7 @@ import {
   updatePasswordWrappedKey
 } from '../storage/vault';
 
-interface UseVaultReturn {
+export interface UseVaultReturn {
   vaultKey: CryptoKey | null;
   isReady: boolean;
   isLocked: boolean;

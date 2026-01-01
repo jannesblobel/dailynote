@@ -1,4 +1,4 @@
-import type { DayCellState } from '../../types';
+import { DayCellState } from '../../types';
 
 interface DayCellProps {
   day: number | null;
@@ -12,7 +12,7 @@ export function DayCell({ day, state, hasNote, onClick }: DayCellProps) {
     return <div className="day-cell day-cell--empty" />;
   }
 
-  const isClickable = state === 'past' || state === 'today';
+  const isClickable = state === DayCellState.Past || state === DayCellState.Today;
 
   return (
     <div

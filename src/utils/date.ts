@@ -1,4 +1,4 @@
-import type { DayCellState } from '../types';
+import { DayCellState } from '../types';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -72,9 +72,9 @@ export function getDayCellState(date: Date): DayCellState {
   const compareDate = new Date(date);
   compareDate.setHours(0, 0, 0, 0);
 
-  if (compareDate.getTime() === today.getTime()) return 'today';
-  if (compareDate < today) return 'past';
-  return 'future';
+  if (compareDate.getTime() === today.getTime()) return DayCellState.Today;
+  if (compareDate < today) return DayCellState.Past;
+  return DayCellState.Future;
 }
 
 /**

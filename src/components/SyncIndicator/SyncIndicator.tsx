@@ -1,4 +1,4 @@
-import type { SyncStatus } from '../../types';
+import { SyncStatus } from '../../types';
 
 interface SyncIndicatorProps {
   status: SyncStatus;
@@ -7,13 +7,13 @@ interface SyncIndicatorProps {
 export function SyncIndicator({ status }: SyncIndicatorProps) {
   const getLabel = () => {
     switch (status) {
-      case 'syncing':
+      case SyncStatus.Syncing:
         return 'Syncing...';
-      case 'synced':
+      case SyncStatus.Synced:
         return 'Synced';
-      case 'offline':
+      case SyncStatus.Offline:
         return 'Offline';
-      case 'error':
+      case SyncStatus.Error:
         return 'Sync error';
       default:
         return '';
@@ -25,7 +25,7 @@ export function SyncIndicator({ status }: SyncIndicatorProps) {
 
   return (
     <span className={`sync-indicator sync-indicator--${status}`}>
-      {status === 'syncing' && <span className="sync-indicator__spinner" />}
+      {status === SyncStatus.Syncing && <span className="sync-indicator__spinner" />}
       {label}
     </span>
   );

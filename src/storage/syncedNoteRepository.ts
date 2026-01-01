@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Note, SyncedNote, SyncStatus } from '../types';
+import { SyncStatus, type Note, type SyncedNote } from '../types';
 import type { NoteRepository } from './noteRepository';
 import { sanitizeHtml } from '../utils/sanitize';
 import { bytesToBase64, base64ToBytes, encodeUtf8, decodeUtf8, randomBytes } from './cryptoUtils';
@@ -185,7 +185,7 @@ export function createSyncedNoteRepository(
   userId: string,
   vaultKey: CryptoKey
 ): SyncedNoteRepository {
-  let syncStatus: SyncStatus = 'idle';
+  let syncStatus: SyncStatus = SyncStatus.Idle;
   const statusListeners = new Set<(status: SyncStatus) => void>();
 
   const setSyncStatus = (status: SyncStatus) => {
@@ -195,11 +195,11 @@ export function createSyncedNoteRepository(
 
   const sync = async (): Promise<void> => {
     if (!navigator.onLine) {
-      setSyncStatus('offline');
+      setSyncStatus(SyncStatus.Offline);
       return;
     }
 
-    setSyncStatus('syncing');
+    setSyncStatus(SyncStatus.Syncing);
 
     try {
       // Push dirty local notes
@@ -214,10 +214,10 @@ export function createSyncedNoteRepository(
         }
       }
 
-      setSyncStatus('synced');
+      setSyncStatus(SyncStatus.Synced);
     } catch (error) {
       console.error('Sync error:', error);
-      setSyncStatus('error');
+      setSyncStatus(SyncStatus.Error);
     }
   };
 

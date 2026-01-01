@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { AuthState } from '../types';
 
-export type AuthState = 'loading' | 'signed_out' | 'signed_in' | 'awaiting_confirmation';
-
-interface UseAuthReturn {
+export interface UseAuthReturn {
   session: Session | null;
   user: User | null;
   authState: AuthState;
@@ -36,7 +35,7 @@ function formatAuthError(error: AuthError): string {
 
 export function useAuth(): UseAuthReturn {
   const [session, setSession] = useState<Session | null>(null);
-  const [authState, setAuthState] = useState<AuthState>('loading');
+  const [authState, setAuthState] = useState<AuthState>(AuthState.Loading);
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
@@ -44,14 +43,14 @@ export function useAuth(): UseAuthReturn {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setAuthState(session ? 'signed_in' : 'signed_out');
+      setAuthState(session ? AuthState.SignedIn : AuthState.SignedOut);
     });
 
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setAuthState(session ? 'signed_in' : 'signed_out');
+      setAuthState(session ? AuthState.SignedIn : AuthState.SignedOut);
     });
 
     return () => subscription.unsubscribe();
@@ -77,7 +76,7 @@ export function useAuth(): UseAuthReturn {
         if (data.user && !data.session) {
           // User created but not confirmed yet
           setConfirmationEmail(email);
-          setAuthState('awaiting_confirmation');
+          setAuthState(AuthState.AwaitingConfirmation);
           return { success: true };
         }
         // User is confirmed and signed in (e.g., if email confirmation is disabled)
@@ -127,7 +126,7 @@ export function useAuth(): UseAuthReturn {
 
   const backToSignIn = useCallback(() => {
     setConfirmationEmail(null);
-    setAuthState('signed_out');
+    setAuthState(AuthState.SignedOut);
   }, []);
 
   return {
@@ -144,3 +143,5 @@ export function useAuth(): UseAuthReturn {
     backToSignIn
   };
 }
+
+export { AuthState };

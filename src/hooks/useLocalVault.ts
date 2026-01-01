@@ -8,7 +8,7 @@ import {
   ensureDeviceWrappedKey
 } from '../storage/vault';
 
-interface UseLocalVaultReturn {
+export interface UseLocalVaultReturn {
   vaultKey: CryptoKey | null;
   isReady: boolean;
   isLocked: boolean;

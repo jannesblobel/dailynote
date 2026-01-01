@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SyncStatus } from '../types';
+import { SyncStatus } from '../types';
 import type { SyncedNoteRepository } from '../storage/syncedNoteRepository';
 
 interface UseSyncReturn {
@@ -9,7 +9,7 @@ interface UseSyncReturn {
 }
 
 export function useSync(repository: SyncedNoteRepository | null): UseSyncReturn {
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncStatus.Idle);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const syncTimeoutRef = useRef<number | null>(null);
   const isSyncingRef = useRef(false);
@@ -17,14 +17,14 @@ export function useSync(repository: SyncedNoteRepository | null): UseSyncReturn 
   // Subscribe to repository sync status changes
   useEffect(() => {
     if (!repository) {
-      setSyncStatus('idle');
+      setSyncStatus(SyncStatus.Idle);
       return;
     }
 
     setSyncStatus(repository.getSyncStatus());
     return repository.onSyncStatusChange((status) => {
       setSyncStatus(status);
-      if (status === 'synced') {
+      if (status === SyncStatus.Synced) {
         setLastSynced(new Date());
       }
     });
@@ -94,7 +94,7 @@ export function useSync(repository: SyncedNoteRepository | null): UseSyncReturn 
   // Update offline status
   useEffect(() => {
     const handleOffline = () => {
-      setSyncStatus('offline');
+      setSyncStatus(SyncStatus.Offline);
     };
 
     window.addEventListener('offline', handleOffline);

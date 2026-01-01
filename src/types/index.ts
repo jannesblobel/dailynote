@@ -11,7 +11,17 @@ export interface SyncedNote extends Note {
   deleted?: boolean;
 }
 
-export type ViewType = 'note' | 'calendar';
+export enum AuthState {
+  Loading = 'loading',
+  SignedOut = 'signed_out',
+  SignedIn = 'signed_in',
+  AwaitingConfirmation = 'awaiting_confirmation'
+}
+
+export enum ViewType {
+  Note = 'note',
+  Calendar = 'calendar'
+}
 
 export interface UrlState {
   view: ViewType;
@@ -19,6 +29,17 @@ export interface UrlState {
   year: number;
 }
 
-export type DayCellState = 'empty' | 'past' | 'today' | 'future';
+export enum DayCellState {
+  Empty = 'empty',
+  Past = 'past',
+  Today = 'today',
+  Future = 'future'
+}
 
-export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'offline' | 'error';
+export enum SyncStatus {
+  Idle = 'idle',
+  Syncing = 'syncing',
+  Synced = 'synced',
+  Offline = 'offline',
+  Error = 'error'
+}
