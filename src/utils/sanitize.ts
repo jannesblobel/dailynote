@@ -4,13 +4,15 @@ import DOMPurify from 'dompurify';
  * Configuration for DOMPurify
  * Only allows basic formatting tags
  */
-const SANITIZE_CONFIG: DOMPurify.Config = {
+const SANITIZE_CONFIG = {
   ALLOWED_TAGS: [
     'b', 'i', 'em', 'strong', 'u', 's', 'strike', 'del',
     'br', 'p', 'div', 'span'
   ],
   ALLOWED_ATTR: [], // No attributes needed for basic formatting
   KEEP_CONTENT: true, // Keep text content even if tags are stripped
+  RETURN_DOM: false,
+  RETURN_DOM_FRAGMENT: false,
 };
 
 /**
@@ -22,7 +24,8 @@ export function sanitizeHtml(html: string): string {
     return '';
   }
 
-  return DOMPurify.sanitize(html, SANITIZE_CONFIG);
+  const result = DOMPurify.sanitize(html, SANITIZE_CONFIG);
+  return typeof result === 'string' ? result : '';
 }
 
 /**

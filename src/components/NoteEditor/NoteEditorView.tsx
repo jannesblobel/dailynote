@@ -5,7 +5,7 @@ interface NoteEditorViewProps {
   isEditable: boolean;
   isClosing: boolean;
   showSaving: boolean;
-  editorRef: RefObject<HTMLDivElement>;
+  editorRef: RefObject<HTMLDivElement | null>;
   onInput: (e: FormEvent<HTMLDivElement>) => void;
   onPaste: (e: ClipboardEvent<HTMLDivElement>) => void;
 }

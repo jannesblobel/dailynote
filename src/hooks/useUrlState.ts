@@ -27,7 +27,7 @@ export function useUrlState() {
     if (!isFuture(date)) {
       const parsed = parseDate(date);
       const year = parsed?.getFullYear() ?? new Date().getFullYear();
-      const nextState = { view: 'note', date, year };
+      const nextState = { view: 'note' as const, date, year };
       window.history.pushState({}, '', serializeUrlState(nextState));
       setState(nextState);
     }
@@ -35,13 +35,13 @@ export function useUrlState() {
 
   const navigateToCalendar = useCallback((year?: number) => {
     const targetYear = year ?? state.year ?? new Date().getFullYear();
-    const nextState = { view: 'calendar', date: null, year: targetYear };
+    const nextState = { view: 'calendar' as const, date: null, year: targetYear };
     window.history.pushState({}, '', serializeUrlState(nextState));
     setState(nextState);
   }, [state.year]);
 
   const navigateToYear = useCallback((year: number) => {
-    const nextState = { view: 'calendar', date: null, year };
+    const nextState = { view: 'calendar' as const, date: null, year };
     window.history.pushState({}, '', serializeUrlState(nextState));
     setState(nextState);
   }, []);
