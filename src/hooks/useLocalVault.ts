@@ -5,7 +5,8 @@ import {
   createRandomVault,
   unlockWithPassword,
   tryUnlockWithDeviceKey,
-  ensureDeviceWrappedKey
+  ensureDeviceWrappedKey,
+  canUseDeviceKey
 } from '../storage/vault';
 
 export interface UseLocalVaultReturn {
@@ -38,11 +39,16 @@ export function useLocalVault(): UseLocalVaultReturn {
 
       if (!existing) {
         try {
-          const key = await createRandomVault();
-          if (!cancelled) {
-            setVaultKey(key);
-            setHasVault(true);
-            setRequiresPassword(false);
+          const deviceKeyAvailable = await canUseDeviceKey();
+          if (deviceKeyAvailable) {
+            const key = await createRandomVault();
+            if (!cancelled) {
+              setVaultKey(key);
+              setHasVault(true);
+              setRequiresPassword(false);
+            }
+          } else if (!cancelled) {
+            setRequiresPassword(true);
           }
         } catch {
           if (!cancelled) {

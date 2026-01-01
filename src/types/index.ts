@@ -11,17 +11,21 @@ export interface SyncedNote extends Note {
   deleted?: boolean;
 }
 
-export enum AuthState {
-  Loading = 'loading',
-  SignedOut = 'signed_out',
-  SignedIn = 'signed_in',
-  AwaitingConfirmation = 'awaiting_confirmation'
-}
+export const AuthState = {
+  Loading: 'loading',
+  SignedOut: 'signed_out',
+  SignedIn: 'signed_in',
+  AwaitingConfirmation: 'awaiting_confirmation'
+} as const;
 
-export enum ViewType {
-  Note = 'note',
-  Calendar = 'calendar'
-}
+export type AuthState = (typeof AuthState)[keyof typeof AuthState];
+
+export const ViewType = {
+  Note: 'note',
+  Calendar: 'calendar'
+} as const;
+
+export type ViewType = (typeof ViewType)[keyof typeof ViewType];
 
 export interface UrlState {
   view: ViewType;
@@ -29,17 +33,21 @@ export interface UrlState {
   year: number;
 }
 
-export enum DayCellState {
-  Empty = 'empty',
-  Past = 'past',
-  Today = 'today',
-  Future = 'future'
-}
+export const DayCellState = {
+  Empty: 'empty',
+  Past: 'past',
+  Today: 'today',
+  Future: 'future'
+} as const;
 
-export enum SyncStatus {
-  Idle = 'idle',
-  Syncing = 'syncing',
-  Synced = 'synced',
-  Offline = 'offline',
-  Error = 'error'
-}
+export type DayCellState = (typeof DayCellState)[keyof typeof DayCellState];
+
+export const SyncStatus = {
+  Idle: 'idle',
+  Syncing: 'syncing',
+  Synced: 'synced',
+  Offline: 'offline',
+  Error: 'error'
+} as const;
+
+export type SyncStatus = (typeof SyncStatus)[keyof typeof SyncStatus];

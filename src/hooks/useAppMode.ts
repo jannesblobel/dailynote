@@ -1,11 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { AuthState } from './useAuth';
 import { STORAGE_PREFIX } from '../utils/constants';
+import { useCloudPrompt } from './useCloudPrompt';
+import { AppMode } from '../utils/appMode';
 
-export enum AppMode {
-  Local = 'local',
-  Cloud = 'cloud'
-}
+export { AppMode } from '../utils/appMode';
+export type { AppMode } from '../utils/appMode';
 
 const CLOUD_PROMPT_KEY = `${STORAGE_PREFIX}cloud_prompted_v1`;
 
@@ -26,47 +26,39 @@ export interface UseAppModeReturn {
 
 export function useAppMode({ authState }: UseAppModeProps): UseAppModeReturn {
   const [modePreference, setModePreference] = useState<AppMode | null>(null);
-  const [isModeChoiceOpenState, setIsModeChoiceOpenState] = useState(false);
-  const [pendingModeChoice, setPendingModeChoice] = useState(false);
-  const hasShownModeChoiceRef = useRef(
-    typeof window !== 'undefined' && localStorage.getItem(CLOUD_PROMPT_KEY) === '1'
-  );
+  const cloudPrompt = useCloudPrompt(CLOUD_PROMPT_KEY);
   const mode: AppMode = authState === AuthState.SignedIn ? AppMode.Cloud : (modePreference ?? AppMode.Local);
 
   const setMode = useCallback((nextMode: AppMode) => {
     setModePreference(nextMode);
     if (nextMode === AppMode.Cloud) {
-      setIsModeChoiceOpenState(false);
+      cloudPrompt.close();
     }
-  }, []);
+  }, [cloudPrompt]);
 
   const requestModeChoice = useCallback(() => {
-    if (hasShownModeChoiceRef.current) return;
-    setPendingModeChoice(true);
-  }, []);
+    cloudPrompt.request();
+  }, [cloudPrompt]);
 
   const openModeChoice = useCallback(() => {
-    setIsModeChoiceOpenState(true);
-    setPendingModeChoice(false);
-    hasShownModeChoiceRef.current = true;
-    localStorage.setItem(CLOUD_PROMPT_KEY, '1');
-  }, []);
+    cloudPrompt.open();
+  }, [cloudPrompt]);
 
   const closeModeChoice = useCallback(() => {
-    setIsModeChoiceOpenState(false);
-  }, []);
+    cloudPrompt.close();
+  }, [cloudPrompt]);
 
   const switchToCloud = useCallback(() => {
     setMode(AppMode.Cloud);
   }, [setMode]);
 
-  const isModeChoiceOpen = mode === AppMode.Cloud ? false : isModeChoiceOpenState;
+  const isModeChoiceOpen = mode === AppMode.Cloud ? false : cloudPrompt.isOpen;
 
   return {
     mode,
     setMode,
     isModeChoiceOpen,
-    pendingModeChoice,
+    pendingModeChoice: cloudPrompt.isPending,
     requestModeChoice,
     openModeChoice,
     closeModeChoice,

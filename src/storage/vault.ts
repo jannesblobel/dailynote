@@ -100,6 +100,15 @@ async function getOrCreateDeviceKey(): Promise<CryptoKey> {
   return key;
 }
 
+export async function canUseDeviceKey(): Promise<boolean> {
+  try {
+    await getOrCreateDeviceKey();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function derivePasswordKey(
   password: string,
   salt: Uint8Array<ArrayBuffer>,
@@ -291,9 +300,13 @@ async function unwrapVaultKey(
   );
 }
 
-export async function createVault(password: string): Promise<CryptoKey> {
+export async function createVault(
+  password: string,
+  options?: { kdfIterations?: number }
+): Promise<CryptoKey> {
   const salt = randomBytes(16);
-  const passwordKey = await derivePasswordKey(password, salt, KDF_ITERATIONS);
+  const iterations = options?.kdfIterations ?? KDF_ITERATIONS;
+  const passwordKey = await derivePasswordKey(password, salt, iterations);
   const vaultKey = await crypto.subtle.generateKey(
     { name: 'AES-GCM', length: 256 },
     true,
@@ -313,7 +326,7 @@ export async function createVault(password: string): Promise<CryptoKey> {
     version: 1,
     kdf: {
       salt: bytesToBase64(salt),
-      iterations: KDF_ITERATIONS
+      iterations
     },
     wrapped: {
       password: passwordWrapped,
@@ -332,18 +345,20 @@ export async function createRandomVault(): Promise<CryptoKey> {
 
 export async function updatePasswordWrappedKey(
   vaultKey: CryptoKey,
-  password: string
+  password: string,
+  options?: { kdfIterations?: number }
 ): Promise<void> {
   const meta = loadVaultMeta();
   if (!meta) return;
   const salt = randomBytes(16);
-  const passwordKey = await derivePasswordKey(password, salt, KDF_ITERATIONS);
+  const iterations = options?.kdfIterations ?? KDF_ITERATIONS;
+  const passwordKey = await derivePasswordKey(password, salt, iterations);
   const passwordWrapped = await wrapVaultKey(vaultKey, passwordKey);
   const nextMeta: VaultMeta = {
     ...meta,
     kdf: {
       salt: bytesToBase64(salt),
-      iterations: KDF_ITERATIONS
+      iterations
     },
     wrapped: {
       ...meta.wrapped,

@@ -29,9 +29,12 @@ export function useContentEditable({
 
     const html = e.clipboardData.getData('text/html');
     const text = e.clipboardData.getData('text/plain');
-    const contentToPaste = html ? sanitizeHtml(html) : text;
-
-    document.execCommand('insertHTML', false, contentToPaste);
+    if (html) {
+      const sanitized = sanitizeHtml(html);
+      document.execCommand('insertHTML', false, sanitized);
+    } else {
+      document.execCommand('insertText', false, text);
+    }
     onUserInput?.();
   }, [onUserInput]);
 

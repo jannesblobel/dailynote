@@ -5,7 +5,7 @@ import type { SyncedNoteRepository } from '../storage/syncedNoteRepository';
 interface UseSyncReturn {
   syncStatus: SyncStatus;
   lastSynced: Date | null;
-  triggerSync: () => void;
+  triggerSync: (options?: { immediate?: boolean }) => void;
 }
 
 export function useSync(repository: SyncedNoteRepository | null): UseSyncReturn {
@@ -31,12 +31,24 @@ export function useSync(repository: SyncedNoteRepository | null): UseSyncReturn 
   }, [repository]);
 
   // Sync function with debounce
-  const triggerSync = useCallback(() => {
+  const triggerSync = useCallback((options?: { immediate?: boolean }) => {
     if (!repository || isSyncingRef.current) return;
 
     // Clear existing timeout
     if (syncTimeoutRef.current) {
       window.clearTimeout(syncTimeoutRef.current);
+    }
+
+    if (options?.immediate) {
+      isSyncingRef.current = true;
+      void (async () => {
+        try {
+          await repository.sync();
+        } finally {
+          isSyncingRef.current = false;
+        }
+      })();
+      return;
     }
 
     // Debounce sync by 2 seconds
@@ -51,46 +63,6 @@ export function useSync(repository: SyncedNoteRepository | null): UseSyncReturn 
     }, 2000);
   }, [repository]);
 
-  // Initial sync on mount
-  useEffect(() => {
-    if (!repository) return;
-
-    const initialSync = async () => {
-      isSyncingRef.current = true;
-      try {
-        await repository.sync();
-      } finally {
-        isSyncingRef.current = false;
-      }
-    };
-
-    void initialSync();
-
-    return () => {
-      if (syncTimeoutRef.current) {
-        window.clearTimeout(syncTimeoutRef.current);
-      }
-    };
-  }, [repository]);
-
-  // Sync on reconnect
-  useEffect(() => {
-    if (!repository) return;
-
-    const handleOnline = async () => {
-      if (isSyncingRef.current) return;
-      isSyncingRef.current = true;
-      try {
-        await repository.sync();
-      } finally {
-        isSyncingRef.current = false;
-      }
-    };
-
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
-  }, [repository]);
-
   // Update offline status
   useEffect(() => {
     const handleOffline = () => {
@@ -99,6 +71,14 @@ export function useSync(repository: SyncedNoteRepository | null): UseSyncReturn 
 
     window.addEventListener('offline', handleOffline);
     return () => window.removeEventListener('offline', handleOffline);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (syncTimeoutRef.current) {
+        window.clearTimeout(syncTimeoutRef.current);
+      }
+    };
   }, []);
 
   return {

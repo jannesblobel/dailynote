@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Modal } from './Modal';
 import { NoteEditor } from './NoteEditor';
 import { AuthForm } from './AuthForm';
 import { VaultUnlock } from './VaultUnlock';
 import { isContentEmpty } from '../utils/sanitize';
 import { AppMode } from '../hooks/useAppMode';
+import { useModalTransition } from '../hooks/useModalTransition';
 import { AuthState, ViewType } from '../types';
 import { useActiveVaultContext } from '../contexts/activeVaultContext';
 import { useAppModeContext } from '../contexts/appModeContext';
@@ -39,97 +40,118 @@ export function AppModals() {
     content,
     setContent,
     isDecrypting,
-    noteDates
+    noteDates,
+    triggerSync
   } = useNoteRepositoryContext();
   const {
     view,
     date,
     year,
-    navigateToCalendar
+    navigateToCalendar,
+    showIntro,
+    dismissIntro,
+    startWriting
   } = useUrlStateContext();
   const isNoteModalOpen = view === ViewType.Note && date !== null && isVaultUnlocked;
-  const [showModalContent, setShowModalContent] = useState(false);
-  const modalTimerRef = useRef<number | null>(null);
-  const resetTimerRef = useRef<number | null>(null);
-  const [isClosing, setIsClosing] = useState(false);
-  const closeTimerRef = useRef<number | null>(null);
 
-  const handleCloseModal = useCallback(() => {
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current);
-    }
-    if (resetTimerRef.current !== null) {
-      window.clearTimeout(resetTimerRef.current);
-    }
-    setShowModalContent(false);
-
-    setIsClosing(true);
+  const handleCloseComplete = useCallback(() => {
     const hasLocalNote = noteDates.size > 0 || !isContentEmpty(content);
     const shouldPromptModeChoice = mode === AppMode.Local && hasLocalNote;
-    closeTimerRef.current = window.setTimeout(() => {
-      setIsClosing(false);
-      navigateToCalendar(year);
-      if (shouldPromptModeChoice) {
-        requestModeChoice();
-      }
-    }, 200);
-  }, [content, mode, navigateToCalendar, noteDates.size, requestModeChoice, year]);
+    if (mode === AppMode.Cloud) {
+      triggerSync({ immediate: true });
+    }
+    navigateToCalendar(year);
+    if (shouldPromptModeChoice) {
+      requestModeChoice();
+    }
+  }, [content, mode, navigateToCalendar, noteDates.size, requestModeChoice, triggerSync, year]);
 
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current !== null) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-      if (resetTimerRef.current !== null) {
-        window.clearTimeout(resetTimerRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (modalTimerRef.current !== null) {
-      window.clearTimeout(modalTimerRef.current);
-    }
-    if (resetTimerRef.current !== null) {
-      window.clearTimeout(resetTimerRef.current);
-    }
-    resetTimerRef.current = window.setTimeout(() => {
-      setShowModalContent(false);
-    }, 0);
-    if (isNoteModalOpen) {
-      modalTimerRef.current = window.setTimeout(() => {
-        setShowModalContent(true);
-      }, 100);
-    }
-    return () => {
-      if (modalTimerRef.current !== null) {
-        window.clearTimeout(modalTimerRef.current);
-        modalTimerRef.current = null;
-      }
-      if (resetTimerRef.current !== null) {
-        window.clearTimeout(resetTimerRef.current);
-        resetTimerRef.current = null;
-      }
-    };
-  }, [isNoteModalOpen]);
+  const {
+    showContent: showModalContent,
+    isClosing,
+    requestClose: handleCloseModal
+  } = useModalTransition({
+    isOpen: isNoteModalOpen,
+    onCloseComplete: handleCloseComplete,
+    openDelayMs: 100,
+    resetDelayMs: 0,
+    closeDelayMs: 200
+  });
 
   useEffect(() => {
     if (!pendingModeChoice || isNoteModalOpen) return;
     openModeChoice();
   }, [pendingModeChoice, isNoteModalOpen, openModeChoice]);
 
-  const showLocalVaultModal = mode === AppMode.Local && isVaultLocked && localVault.isReady && localVault.requiresPassword;
+  useEffect(() => {
+    if (mode !== AppMode.Cloud || !isVaultUnlocked) {
+      return;
+    }
+
+    const handlePageExit = () => {
+      triggerSync({ immediate: true });
+    };
+
+    window.addEventListener('pagehide', handlePageExit);
+    window.addEventListener('beforeunload', handlePageExit);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageExit);
+      window.removeEventListener('beforeunload', handlePageExit);
+    };
+  }, [mode, isVaultUnlocked, triggerSync]);
+
+  const showLocalVaultModal = !showIntro &&
+    mode === AppMode.Local &&
+    isVaultLocked &&
+    localVault.isReady &&
+    localVault.requiresPassword;
   const isSigningIn = auth.authState === AuthState.Loading ||
     (mode === AppMode.Cloud && auth.authState === AuthState.SignedIn && (!cloudVault.isReady || cloudVault.isBusy));
-  const showCloudAuthModal = mode === AppMode.Cloud && (
-    auth.authState === AuthState.SignedOut ||
-    auth.authState === AuthState.AwaitingConfirmation ||
-    isSigningIn
-  );
+  const showCloudAuthModal = !showIntro &&
+    mode === AppMode.Cloud && (
+      auth.authState === AuthState.SignedOut ||
+      auth.authState === AuthState.AwaitingConfirmation ||
+      isSigningIn
+    );
+
+  const showModeChoice = isModeChoiceOpen && !showIntro;
 
   return (
     <>
-      <Modal isOpen={isModeChoiceOpen} onClose={() => {}} variant="overlay">
+      <Modal isOpen={showIntro} onClose={dismissIntro} variant="overlay">
+        <div className="vault-unlock">
+          <div className="vault-unlock__card">
+            <h2 className="vault-unlock__title">Welcome to DailyNotes</h2>
+            <p className="vault-unlock__helper">
+              A calm place for one note per day. No account required to start.
+            </p>
+            <ul className="intro-list">
+              <li>Your notes are encrypted on this device before storage.</li>
+              <li>Sync is optional and keeps encrypted backups in the cloud.</li>
+            </ul>
+            <div className="vault-unlock__choices">
+              <button
+                className="button button--primary vault-unlock__button"
+                onClick={startWriting}
+              >
+                Start writing
+              </button>
+              <button
+                className="button button--ghost vault-unlock__button"
+                onClick={() => {
+                  dismissIntro();
+                  switchToCloud();
+                }}
+              >
+                Set up sync
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showModeChoice} onClose={() => {}} variant="overlay">
         <div className="vault-unlock">
           <div className="vault-unlock__card">
             <h2 className="vault-unlock__title">Sync your notes?</h2>
@@ -198,7 +220,7 @@ export function AppModals() {
         )}
       </Modal>
 
-      <Modal isOpen={!!vaultError && isVaultReady} onClose={() => {}} variant="overlay">
+      <Modal isOpen={!!vaultError && isVaultReady && !showIntro} onClose={() => {}} variant="overlay">
         <div className="vault-unlock">
           <div className="vault-unlock__card">
             <h2 className="vault-unlock__title">Unlock Error</h2>

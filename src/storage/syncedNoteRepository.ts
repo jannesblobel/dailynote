@@ -7,7 +7,10 @@ import {
   fetchNoteIndex,
   fetchRemoteNoteByDate,
   pushNote,
-  decryptNote
+  decryptNote,
+  deleteRemoteNote,
+  resolveConflict,
+  RevisionConflictError
 } from './syncService';
 
 const NOTE_IV_BYTES = 12;
@@ -202,15 +205,123 @@ export function createSyncedNoteRepository(
     setSyncStatus(SyncStatus.Syncing);
 
     try {
-      // Push dirty local notes
       const updatedLocalNotes = await getAllLocalNotes();
-      for (const [date, local] of updatedLocalNotes) {
-        if (local.dirty && !local.deleted) {
-          const note = await decryptFromLocal(vaultKey, local);
-          const pushed = await pushNote(supabase, userId, note, vaultKey);
+      const processedDates = new Set<string>();
+
+      const pushLocalNote = async (localNote: SyncedNote, date: string): Promise<void> => {
+        if (localNote.deleted) {
+          if (localNote.id) {
+            await deleteRemoteNote(supabase, userId, localNote.id);
+          }
+          const updated = await encryptForLocal(vaultKey, {
+            ...localNote,
+            deleted: true
+          });
+          await setLocalNote(date, updated);
+          return;
+        }
+
+        try {
+          const pushed = await pushNote(supabase, userId, localNote, vaultKey);
           const decrypted = await decryptNote(vaultKey, pushed);
           const updated = await encryptForLocal(vaultKey, decrypted);
           await setLocalNote(date, updated);
+        } catch (error) {
+          if (!(error instanceof RevisionConflictError)) {
+            throw error;
+          }
+
+          const latestEncrypted = await fetchRemoteNoteByDate(supabase, userId, date);
+          if (!latestEncrypted) {
+            throw error;
+          }
+          const latestRemote = await decryptNote(vaultKey, latestEncrypted);
+          const winner = resolveConflict(localNote, latestRemote);
+          if (winner === 'local') {
+            const rebasedLocal: SyncedNote = {
+              ...localNote,
+              serverUpdatedAt: latestRemote.serverUpdatedAt,
+              revision: Math.max(localNote.revision, latestRemote.revision + 1)
+            };
+            const pushed = await pushNote(supabase, userId, rebasedLocal, vaultKey);
+            const decrypted = await decryptNote(vaultKey, pushed);
+            const updated = await encryptForLocal(vaultKey, decrypted);
+            await setLocalNote(date, updated);
+          } else {
+            const updated = await encryptForLocal(vaultKey, latestRemote);
+            await setLocalNote(date, updated);
+          }
+        }
+      };
+
+      // Reconcile dirty local notes with any remote updates.
+      for (const [date, local] of updatedLocalNotes) {
+        if (!local.dirty) continue;
+
+        const localNote = await decryptFromLocal(vaultKey, local);
+        const remoteEncrypted = await fetchRemoteNoteByDate(supabase, userId, date);
+        if (remoteEncrypted) {
+          const remoteNote = await decryptNote(vaultKey, remoteEncrypted);
+          const winner = resolveConflict(localNote, remoteNote);
+          if (winner === 'local') {
+            await pushLocalNote(localNote, date);
+          } else {
+            const updated = await encryptForLocal(vaultKey, remoteNote);
+            await setLocalNote(date, {
+              ...updated,
+              dirty: false
+            });
+          }
+        } else {
+          await pushLocalNote(localNote, date);
+        }
+
+        processedDates.add(date);
+      }
+
+      // Pull remote updates for notes that weren't processed above.
+      const remoteDates = await fetchNoteIndex(supabase, userId);
+      const remoteDateSet = new Set(remoteDates);
+      for (const date of remoteDates) {
+        if (processedDates.has(date)) continue;
+
+        const remoteEncrypted = await fetchRemoteNoteByDate(supabase, userId, date);
+        if (!remoteEncrypted) continue;
+        const remoteNote = await decryptNote(vaultKey, remoteEncrypted);
+
+        const local = updatedLocalNotes.get(date);
+        if (!local) {
+          if (!remoteNote.deleted) {
+            const updated = await encryptForLocal(vaultKey, remoteNote);
+            await setLocalNote(date, updated);
+          }
+          continue;
+        }
+
+        if (local.dirty) continue;
+
+        const localNote = await decryptFromLocal(vaultKey, local);
+        const winner = resolveConflict(localNote, remoteNote);
+        if (winner === 'remote') {
+          const updated = await encryptForLocal(vaultKey, remoteNote);
+          await setLocalNote(date, {
+            ...updated,
+            dirty: false
+          });
+        } else {
+          await pushLocalNote(localNote, date);
+        }
+      }
+
+      // Treat missing remote dates as deletions when the note isn't dirty locally.
+      for (const [date, local] of updatedLocalNotes) {
+        if (local.dirty || local.deleted) continue;
+        if (!remoteDateSet.has(date)) {
+          await setLocalNote(date, {
+            ...local,
+            deleted: true,
+            dirty: false
+          });
         }
       }
 
@@ -241,6 +352,14 @@ export function createSyncedNoteRepository(
       const remote = await fetchRemoteNoteByDate(supabase, userId, date);
       if (!remote || remote.deleted) {
         if (local) {
+          if (remote?.deleted && !local.deleted) {
+            await setLocalNote(date, {
+              ...local,
+              deleted: true,
+              dirty: false
+            });
+            return null;
+          }
           const note = await decryptFromLocal(vaultKey, local);
           return {
             date: note.date,
@@ -313,6 +432,11 @@ export function createSyncedNoteRepository(
       const localDates = Array.from(localNotes.entries())
         .filter(([, note]) => !note.deleted)
         .map(([date]) => date);
+      const localDeletedDates = new Set(
+        Array.from(localNotes.entries())
+          .filter(([, note]) => note.deleted)
+          .map(([date]) => date)
+      );
 
       if (!navigator.onLine) {
         return localDates;
@@ -321,6 +445,7 @@ export function createSyncedNoteRepository(
       try {
         const remoteDates = await fetchNoteIndex(supabase, userId);
         const merged = new Set<string>([...remoteDates, ...localDates]);
+        localDeletedDates.forEach((date) => merged.delete(date));
         return Array.from(merged);
       } catch {
         return localDates;
@@ -333,6 +458,12 @@ export function createSyncedNoteRepository(
         .filter(([, note]) => !note.deleted)
         .map(([date]) => date)
         .filter((date) => date.slice(-4) === String(year));
+      const localDeletedDates = new Set(
+        Array.from(localNotes.entries())
+          .filter(([, note]) => note.deleted)
+          .map(([date]) => date)
+          .filter((date) => date.slice(-4) === String(year))
+      );
 
       if (!navigator.onLine) {
         return localDates;
@@ -341,6 +472,7 @@ export function createSyncedNoteRepository(
       try {
         const remoteDates = await fetchNoteIndex(supabase, userId, year);
         const merged = new Set<string>([...remoteDates, ...localDates]);
+        localDeletedDates.forEach((date) => merged.delete(date));
         return Array.from(merged);
       } catch {
         return localDates;

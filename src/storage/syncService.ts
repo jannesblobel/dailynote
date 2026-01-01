@@ -5,6 +5,13 @@ import { sanitizeHtml } from '../utils/sanitize';
 
 const NOTE_IV_BYTES = 12;
 
+export class RevisionConflictError extends Error {
+  code = 'REVISION_CONFLICT';
+  constructor() {
+    super('Revision conflict');
+  }
+}
+
 interface RemoteNoteRow {
   id: string;
   user_id: string;
@@ -151,15 +158,24 @@ export async function pushNote(
 
   if (note.id) {
     // Update existing note
-    const { data, error } = await supabase
+    let query = supabase
       .from('notes')
       .update(payload)
       .eq('id', note.id)
-      .eq('user_id', userId)
+      .eq('user_id', userId);
+
+    if (note.serverUpdatedAt) {
+      query = query.eq('server_updated_at', note.serverUpdatedAt);
+    } else {
+      query = query.is('server_updated_at', null);
+    }
+
+    const { data, error } = await query
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) throw new RevisionConflictError();
     const row = data as RemoteNoteRow;
     return {
       id: row.id,
