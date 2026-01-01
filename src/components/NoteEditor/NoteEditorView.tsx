@@ -4,7 +4,8 @@ interface NoteEditorViewProps {
   formattedDate: string;
   isEditable: boolean;
   isClosing: boolean;
-  showSaving: boolean;
+  showReadonlyBadge: boolean;
+  statusText: string | null;
   editorRef: RefObject<HTMLDivElement | null>;
   onInput: (e: FormEvent<HTMLDivElement>) => void;
   onPaste: (e: ClipboardEvent<HTMLDivElement>) => void;
@@ -14,7 +15,8 @@ export function NoteEditorView({
   formattedDate,
   isEditable,
   isClosing,
-  showSaving,
+  showReadonlyBadge,
+  statusText,
   editorRef,
   onInput,
   onPaste
@@ -24,12 +26,12 @@ export function NoteEditorView({
       <div className="note-editor__header">
         <div>
           <span className="note-editor__date">{formattedDate}</span>
-          {!isEditable && (
+          {showReadonlyBadge && (
             <span className="note-editor__readonly-badge">Read only</span>
           )}
         </div>
-        {isEditable && (showSaving || isClosing) && (
-          <span className="note-editor__saving">Saving...</span>
+        {statusText && (
+          <span className="note-editor__saving">{statusText}</span>
         )}
       </div>
       <div className="note-editor__body">

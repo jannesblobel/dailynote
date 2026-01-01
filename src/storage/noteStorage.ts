@@ -1,57 +1,167 @@
 import type { Note } from '../types';
 import type { NoteRepository } from './noteRepository';
-import { STORAGE_PREFIX } from '../utils/constants';
 import { sanitizeHtml } from '../utils/sanitize';
+import { base64ToBytes, bytesToBase64, decodeUtf8, encodeUtf8 } from './cryptoUtils';
 
-function getKey(date: string): string {
-  return `${STORAGE_PREFIX}${date}`;
+const NOTE_IV_BYTES = 12;
+const NOTES_DB_NAME = 'dailynotes-notes';
+const NOTES_STORE = 'notes';
+
+interface EncryptedNotePayload {
+  version: 1;
+  iv: string;
+  data: string;
 }
 
-export const localStorageNoteRepository: NoteRepository = {
-  get(date: string): Note | null {
-    try {
-      const data = localStorage.getItem(getKey(date));
-      if (!data) return null;
+function randomBytes(length: number): Uint8Array {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
 
-      const note = JSON.parse(data) as Note;
-
-      // Sanitize on load - defense against tampered localStorage
-      note.content = sanitizeHtml(note.content);
-
-      return note;
-    } catch {
-      return null;
-    }
-  },
-
-  save(date: string, content: string): void {
-    // Sanitize content before saving (defense in depth)
-    const sanitizedContent = sanitizeHtml(content);
-
-    const note: Note = {
-      date,
-      content: sanitizedContent,
-      updatedAt: new Date().toISOString()
-    };
-    localStorage.setItem(getKey(date), JSON.stringify(note));
-  },
-
-  delete(date: string): void {
-    localStorage.removeItem(getKey(date));
-  },
-
-  getAllDates(): string[] {
-    const dates: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(STORAGE_PREFIX)) {
-        const date = key.slice(STORAGE_PREFIX.length);
-        const note = this.get(date);
-        if (note && note.content.trim().length > 0) {
-          dates.push(date);
-        }
+function openNotesDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(NOTES_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(NOTES_STORE)) {
+        db.createObjectStore(NOTES_STORE);
       }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function getNotePayload(date: string): Promise<EncryptedNotePayload | null> {
+  const db = await openNotesDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NOTES_STORE, 'readonly');
+    const store = tx.objectStore(NOTES_STORE);
+    const request = store.get(date);
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error);
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+
+async function setNotePayload(date: string, payload: EncryptedNotePayload): Promise<void> {
+  const db = await openNotesDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NOTES_STORE, 'readwrite');
+    const store = tx.objectStore(NOTES_STORE);
+    store.put(payload, date);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+
+async function deleteNotePayload(date: string): Promise<void> {
+  const db = await openNotesDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NOTES_STORE, 'readwrite');
+    const store = tx.objectStore(NOTES_STORE);
+    store.delete(date);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+
+async function getAllNoteDates(): Promise<string[]> {
+  const db = await openNotesDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(NOTES_STORE, 'readonly');
+    const store = tx.objectStore(NOTES_STORE);
+    const request = store.getAllKeys();
+    request.onsuccess = () => resolve(request.result.map(key => String(key)));
+    request.onerror = () => reject(request.error);
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+
+async function encryptNotePayload(
+  vaultKey: CryptoKey,
+  note: Note
+): Promise<EncryptedNotePayload> {
+  const iv = randomBytes(NOTE_IV_BYTES);
+  const plaintext = encodeUtf8(JSON.stringify(note));
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    vaultKey,
+    plaintext
+  );
+  return {
+    version: 1,
+    iv: bytesToBase64(iv),
+    data: bytesToBase64(new Uint8Array(ciphertext))
+  };
+}
+
+async function decryptNotePayload(
+  vaultKey: CryptoKey,
+  payload: EncryptedNotePayload
+): Promise<Note> {
+  const iv = base64ToBytes(payload.iv);
+  const ciphertext = base64ToBytes(payload.data);
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    vaultKey,
+    ciphertext
+  );
+  const note = JSON.parse(decodeUtf8(new Uint8Array(decrypted))) as Note;
+  note.content = sanitizeHtml(note.content);
+  return note;
+}
+
+export function createEncryptedNoteRepository(vaultKey: CryptoKey): NoteRepository {
+  return {
+    async get(date: string): Promise<Note | null> {
+      try {
+        const payload = await getNotePayload(date);
+        if (!payload || payload.version !== 1) return null;
+        return decryptNotePayload(vaultKey, payload);
+      } catch {
+        return null;
+      }
+    },
+
+    async save(date: string, content: string): Promise<void> {
+      const sanitizedContent = sanitizeHtml(content);
+      const note: Note = {
+        date,
+        content: sanitizedContent,
+        updatedAt: new Date().toISOString()
+      };
+      const payload = await encryptNotePayload(vaultKey, note);
+      await setNotePayload(date, payload);
+    },
+
+    async delete(date: string): Promise<void> {
+      await deleteNotePayload(date);
+    },
+
+    async getAllDates(): Promise<string[]> {
+      return getAllNoteDates();
     }
-    return dates;
-  }
-};
+  };
+}

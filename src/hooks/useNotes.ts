@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NoteRepository } from '../storage/noteRepository';
-import { localStorageNoteRepository } from '../storage/noteStorage';
+import { createEncryptedNoteRepository } from '../storage/noteStorage';
 import { isContentEmpty } from '../utils/sanitize';
+
+const MIN_DECRYPT_MS = 0;
 
 interface UseNotesReturn {
   content: string;
@@ -9,32 +11,90 @@ interface UseNotesReturn {
   hasNote: (date: string) => boolean;
   noteDates: Set<string>;
   refreshNoteDates: () => void;
+  isDecrypting: boolean;
 }
 
 export function useNotes(
   date: string | null,
-  repository: NoteRepository = localStorageNoteRepository
+  vaultKey: CryptoKey | null
 ): UseNotesReturn {
-  const [, forceRefresh] = useState(0);
+  const [content, setContentState] = useState('');
+  const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
+  const [isDecrypting, setIsDecrypting] = useState(false);
+  const saveQueueRef = useRef(Promise.resolve());
+  const latestContentRef = useRef('');
+  const shouldDelayDecryptRef = useRef(true);
 
-  const content = date ? repository.get(date)?.content ?? '' : '';
-  const noteDates = new Set(repository.getAllDates());
+  const repository = useMemo<NoteRepository | null>(() => {
+    if (!vaultKey) return null;
+    return createEncryptedNoteRepository(vaultKey);
+  }, [vaultKey]);
 
   const refreshNoteDates = useCallback(() => {
-    forceRefresh(prev => prev + 1);
-  }, []);
+    if (!repository) {
+      setNoteDates(new Set());
+      return;
+    }
+    repository.getAllDates()
+      .then(dates => setNoteDates(new Set(dates)))
+      .catch(() => setNoteDates(new Set()));
+  }, [repository]);
+
+  useEffect(() => {
+    refreshNoteDates();
+  }, [refreshNoteDates]);
+
+  useEffect(() => {
+    if (!date || !repository) {
+      setContentState('');
+      setIsDecrypting(false);
+      return;
+    }
+    let cancelled = false;
+    setIsDecrypting(true);
+    const start = performance.now();
+
+    const load = async () => {
+      try {
+        const note = await repository.get(date);
+        if (!cancelled) {
+          setContentState(note?.content ?? '');
+        }
+      } finally {
+        if (shouldDelayDecryptRef.current) {
+          const elapsed = performance.now() - start;
+          const remaining = MIN_DECRYPT_MS - elapsed;
+          if (remaining > 0) {
+            await new Promise(resolve => setTimeout(resolve, remaining));
+          }
+          shouldDelayDecryptRef.current = false;
+        }
+        if (!cancelled) {
+          setIsDecrypting(false);
+        }
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [date, repository]);
 
   const setContent = useCallback((newContent: string) => {
-    if (date) {
-      // Use isContentEmpty to properly check HTML content
-      if (!isContentEmpty(newContent)) {
-        repository.save(date, newContent);
+    if (!date || !repository) return;
+    latestContentRef.current = newContent;
+    setContentState(newContent);
+
+    saveQueueRef.current = saveQueueRef.current.then(async () => {
+      const contentToSave = latestContentRef.current;
+      if (!isContentEmpty(contentToSave)) {
+        await repository.save(date, contentToSave);
       } else {
-        repository.delete(date);
+        await repository.delete(date);
       }
-      forceRefresh(prev => prev + 1);
-    }
-  }, [date, repository]);
+      refreshNoteDates();
+    });
+  }, [date, repository, refreshNoteDates]);
 
   const hasNote = (checkDate: string): boolean => {
     return noteDates.has(checkDate);
@@ -45,6 +105,7 @@ export function useNotes(
     setContent,
     hasNote,
     noteDates,
-    refreshNoteDates
+    refreshNoteDates,
+    isDecrypting
   };
 }

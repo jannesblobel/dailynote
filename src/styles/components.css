@@ -324,8 +324,9 @@
 .note-editor__saving {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
-  opacity: 0.8;
-  transition: opacity 150ms ease;
+  opacity: 0;
+  animation: note-status-fade-in 200ms ease forwards;
+  animation-delay: 100ms;
 }
 
 .note-editor__body {
@@ -398,4 +399,94 @@
   display: block;
   content: "";
   margin: var(--spacing-xs) 0;
+}
+
+@keyframes note-status-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Vault unlock */
+.vault-unlock {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+}
+
+.vault-unlock__card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--spacing-xl);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg);
+  box-shadow: var(--modal-shadow);
+}
+
+.vault-unlock__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--spacing-sm);
+}
+
+.vault-unlock__helper {
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-lg);
+}
+
+.vault-unlock__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.vault-unlock__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.vault-unlock__input {
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: var(--font-size-base);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.vault-unlock__input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.vault-unlock__error {
+  color: #b91c1c;
+  font-size: var(--font-size-sm);
+}
+
+.vault-unlock__button {
+  margin-top: var(--spacing-sm);
+}
+
+.vault-unlock__note {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  margin-top: var(--spacing-lg);
+}
+
+.note-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
 }
