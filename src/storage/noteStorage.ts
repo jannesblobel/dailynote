@@ -1,4 +1,5 @@
 import type { Note } from '../types';
+import type { NoteRepository } from './noteRepository';
 import { STORAGE_PREFIX } from '../utils/constants';
 import { sanitizeHtml } from '../utils/sanitize';
 
@@ -6,7 +7,7 @@ function getKey(date: string): string {
   return `${STORAGE_PREFIX}${date}`;
 }
 
-export const noteStorage = {
+export const localStorageNoteRepository: NoteRepository = {
   get(date: string): Note | null {
     try {
       const data = localStorage.getItem(getKey(date));
@@ -37,11 +38,6 @@ export const noteStorage = {
 
   delete(date: string): void {
     localStorage.removeItem(getKey(date));
-  },
-
-  exists(date: string): boolean {
-    const note = this.get(date);
-    return note !== null && note.content.trim().length > 0;
   },
 
   getAllDates(): string[] {

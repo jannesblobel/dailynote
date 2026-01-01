@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
-import { noteStorage } from '../storage/noteStorage';
+import { useState, useCallback } from 'react';
+import type { NoteRepository } from '../storage/noteRepository';
+import { localStorageNoteRepository } from '../storage/noteStorage';
 import { isContentEmpty } from '../utils/sanitize';
 
 interface UseNotesReturn {
@@ -10,51 +11,34 @@ interface UseNotesReturn {
   refreshNoteDates: () => void;
 }
 
-export function useNotes(date: string | null): UseNotesReturn {
-  const [content, setContentState] = useState('');
-  const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
+export function useNotes(
+  date: string | null,
+  repository: NoteRepository = localStorageNoteRepository
+): UseNotesReturn {
+  const [, forceRefresh] = useState(0);
 
-  // Load note content when date changes
-  useEffect(() => {
-    if (date) {
-      const note = noteStorage.get(date);
-      setContentState(note?.content ?? '');
-    } else {
-      setContentState('');
-    }
-  }, [date]);
-
-  // Load all note dates on mount
-  useEffect(() => {
-    refreshNoteDates();
-  }, []);
+  const content = date ? repository.get(date)?.content ?? '' : '';
+  const noteDates = new Set(repository.getAllDates());
 
   const refreshNoteDates = useCallback(() => {
-    const dates = noteStorage.getAllDates();
-    setNoteDates(new Set(dates));
+    forceRefresh(prev => prev + 1);
   }, []);
 
   const setContent = useCallback((newContent: string) => {
-    setContentState(newContent);
     if (date) {
       // Use isContentEmpty to properly check HTML content
       if (!isContentEmpty(newContent)) {
-        noteStorage.save(date, newContent);
-        setNoteDates(prev => new Set([...prev, date]));
+        repository.save(date, newContent);
       } else {
-        noteStorage.delete(date);
-        setNoteDates(prev => {
-          const next = new Set(prev);
-          next.delete(date);
-          return next;
-        });
+        repository.delete(date);
       }
+      forceRefresh(prev => prev + 1);
     }
-  }, [date]);
+  }, [date, repository]);
 
-  const hasNote = useCallback((checkDate: string): boolean => {
+  const hasNote = (checkDate: string): boolean => {
     return noteDates.has(checkDate);
-  }, [noteDates]);
+  };
 
   return {
     content,
