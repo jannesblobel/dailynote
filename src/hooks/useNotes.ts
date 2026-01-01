@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NoteRepository } from '../storage/noteRepository';
-import { createEncryptedNoteRepository } from '../storage/noteStorage';
 import { isContentEmpty } from '../utils/sanitize';
 
 const MIN_DECRYPT_MS = 0;
@@ -16,7 +15,8 @@ interface UseNotesReturn {
 
 export function useNotes(
   date: string | null,
-  vaultKey: CryptoKey | null
+  repository: NoteRepository | null,
+  onContentChange?: () => void
 ): UseNotesReturn {
   const [content, setContentState] = useState('');
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
@@ -24,11 +24,6 @@ export function useNotes(
   const saveQueueRef = useRef(Promise.resolve());
   const latestContentRef = useRef('');
   const shouldDelayDecryptRef = useRef(true);
-
-  const repository = useMemo<NoteRepository | null>(() => {
-    if (!vaultKey) return null;
-    return createEncryptedNoteRepository(vaultKey);
-  }, [vaultKey]);
 
   const refreshNoteDates = useCallback(() => {
     if (!repository) {
@@ -93,8 +88,9 @@ export function useNotes(
         await repository.delete(date);
       }
       refreshNoteDates();
+      onContentChange?.();
     });
-  }, [date, repository, refreshNoteDates]);
+  }, [date, repository, refreshNoteDates, onContentChange]);
 
   const hasNote = (checkDate: string): boolean => {
     return noteDates.has(checkDate);

@@ -1,7 +1,7 @@
 import type { Note } from '../types';
 import type { NoteRepository } from './noteRepository';
 import { sanitizeHtml } from '../utils/sanitize';
-import { base64ToBytes, bytesToBase64, decodeUtf8, encodeUtf8 } from './cryptoUtils';
+import { base64ToBytes, bytesToBase64, decodeUtf8, encodeUtf8, randomBytes } from './cryptoUtils';
 
 const NOTE_IV_BYTES = 12;
 const NOTES_DB_NAME = 'dailynotes-notes';
@@ -11,12 +11,6 @@ interface EncryptedNotePayload {
   version: 1;
   iv: string;
   data: string;
-}
-
-function randomBytes(length: number): Uint8Array {
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
-  return bytes;
 }
 
 function openNotesDb(): Promise<IDBDatabase> {

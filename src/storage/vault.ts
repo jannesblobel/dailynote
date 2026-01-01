@@ -1,11 +1,11 @@
 import { STORAGE_PREFIX } from '../utils/constants';
-import { base64ToBytes, bytesToBase64, encodeUtf8 } from './cryptoUtils';
+import { base64ToBytes, bytesToBase64, encodeUtf8, randomBytes } from './cryptoUtils';
 
 const VAULT_META_KEY = `${STORAGE_PREFIX}vault_meta_v1`;
 const DB_NAME = 'dailynotes-vault';
 const STORE_NAME = 'keys';
 const DEVICE_KEY_ID = 'device';
-const KDF_ITERATIONS = 210000;
+const KDF_ITERATIONS = 600000;
 const WRAP_IV_BYTES = 12;
 
 export interface VaultMeta {
@@ -102,7 +102,7 @@ async function getOrCreateDeviceKey(): Promise<CryptoKey> {
 
 async function derivePasswordKey(
   password: string,
-  salt: Uint8Array,
+  salt: Uint8Array<ArrayBuffer>,
   iterations: number
 ): Promise<CryptoKey> {
   const baseKey = await crypto.subtle.importKey(
@@ -126,10 +126,135 @@ async function derivePasswordKey(
   );
 }
 
-function randomBytes(length: number): Uint8Array {
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
-  return bytes;
+// Exported KEK derivation for Supabase auth integration
+export async function deriveKEK(
+  password: string,
+  saltBase64: string,
+  iterations: number
+): Promise<CryptoKey> {
+  const salt = base64ToBytes(saltBase64);
+  return derivePasswordKey(password, salt, iterations);
+}
+
+// Generate a new random DEK (Data Encryption Key)
+export async function generateDEK(): Promise<CryptoKey> {
+  return crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+}
+
+// Wrap DEK with KEK for storage
+export async function wrapDEK(
+  dek: CryptoKey,
+  kek: CryptoKey
+): Promise<{ iv: string; data: string }> {
+  const iv = randomBytes(WRAP_IV_BYTES);
+  const wrapped = await crypto.subtle.wrapKey('raw', dek, kek, {
+    name: 'AES-GCM',
+    iv
+  });
+  return {
+    iv: bytesToBase64(iv),
+    data: bytesToBase64(new Uint8Array(wrapped))
+  };
+}
+
+// Unwrap DEK using KEK
+export async function unwrapDEK(
+  wrappedData: string,
+  iv: string,
+  kek: CryptoKey
+): Promise<CryptoKey> {
+  return crypto.subtle.unwrapKey(
+    'raw',
+    base64ToBytes(wrappedData),
+    kek,
+    { name: 'AES-GCM', iv: base64ToBytes(iv) },
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+}
+
+// Generate a random salt for KEK derivation
+export function generateSalt(): string {
+  return bytesToBase64(randomBytes(16));
+}
+
+// Export default iterations for new users
+export const DEFAULT_KDF_ITERATIONS = KDF_ITERATIONS;
+
+// Device-wrapped DEK for offline unlock
+const DEVICE_DEK_ID = 'device_dek';
+
+export async function storeDeviceWrappedDEK(dek: CryptoKey): Promise<void> {
+  try {
+    const deviceKey = await getOrCreateDeviceKey();
+    const wrapped = await wrapDEK(dek, deviceKey);
+    const db = await openDeviceKeyDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.put(wrapped, DEVICE_DEK_ID);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+    });
+  } catch {
+    // Device key storage unavailable
+  }
+}
+
+export async function tryUnlockWithDeviceDEK(): Promise<CryptoKey | null> {
+  try {
+    const deviceKey = await getDeviceKey();
+    if (!deviceKey) return null;
+
+    const db = await openDeviceKeyDb();
+    const wrapped = await new Promise<{ iv: string; data: string } | null>(
+      (resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(DEVICE_DEK_ID);
+        request.onsuccess = () => resolve(request.result ?? null);
+        request.onerror = () => reject(request.error);
+        tx.oncomplete = () => db.close();
+      }
+    );
+
+    if (!wrapped) return null;
+    return await unwrapDEK(wrapped.data, wrapped.iv, deviceKey);
+  } catch {
+    return null;
+  }
+}
+
+export async function clearDeviceWrappedDEK(): Promise<void> {
+  try {
+    const db = await openDeviceKeyDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.delete(DEVICE_DEK_ID);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+    });
+  } catch {
+    // Ignore errors
+  }
 }
 
 async function wrapVaultKey(
@@ -198,6 +323,34 @@ export async function createVault(password: string): Promise<CryptoKey> {
 
   saveVaultMeta(meta);
   return vaultKey;
+}
+
+export async function createRandomVault(): Promise<CryptoKey> {
+  const randomPassword = bytesToBase64(randomBytes(32));
+  return createVault(randomPassword);
+}
+
+export async function updatePasswordWrappedKey(
+  vaultKey: CryptoKey,
+  password: string
+): Promise<void> {
+  const meta = loadVaultMeta();
+  if (!meta) return;
+  const salt = randomBytes(16);
+  const passwordKey = await derivePasswordKey(password, salt, KDF_ITERATIONS);
+  const passwordWrapped = await wrapVaultKey(vaultKey, passwordKey);
+  const nextMeta: VaultMeta = {
+    ...meta,
+    kdf: {
+      salt: bytesToBase64(salt),
+      iterations: KDF_ITERATIONS
+    },
+    wrapped: {
+      ...meta.wrapped,
+      password: passwordWrapped
+    }
+  };
+  saveVaultMeta(nextMeta);
 }
 
 export async function unlockWithPassword(password: string): Promise<CryptoKey> {

@@ -196,6 +196,7 @@
   background-color: var(--color-today);
   border: 2px solid var(--color-today-border);
   font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius);
 }
 
 .day-cell--today:hover {
@@ -482,6 +483,12 @@
   margin-top: var(--spacing-lg);
 }
 
+.vault-unlock__choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
 .note-loading {
   flex: 1;
   display: flex;
@@ -489,4 +496,91 @@
   justify-content: center;
   font-size: var(--font-size-lg);
   color: var(--color-text-muted);
+}
+
+/* Auth form toggle */
+.auth-form__toggle {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.auth-form__toggle:hover {
+  color: var(--color-primary-hover);
+}
+
+.auth-form__toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sync indicator */
+.sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+}
+
+.sync-indicator--synced {
+  color: #16a34a;
+}
+
+.sync-indicator--error {
+  color: #dc2626;
+}
+
+.sync-indicator--offline {
+  color: #d97706;
+}
+
+.sync-indicator__spinner {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-text-muted);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Calendar header with sync */
+.calendar__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  position: absolute;
+  right: var(--spacing-xl);
+}
+
+.calendar__header {
+  position: relative;
+}
+
+.calendar__auth {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+}
+
+.calendar__auth:hover {
+  color: var(--color-text);
+  background-color: var(--color-surface);
 }

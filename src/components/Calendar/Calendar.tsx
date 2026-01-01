@@ -1,15 +1,28 @@
 import { useEffect, useRef } from 'react';
 import { MonthGrid } from './MonthGrid';
 import { Button } from '../Button';
+import { SyncIndicator } from '../SyncIndicator';
+import type { SyncStatus } from '../../types';
 
 interface CalendarProps {
   year: number;
   hasNote: (date: string) => boolean;
-  onDayClick: (date: string) => void;
+  onDayClick?: (date: string) => void;
   onYearChange: (year: number) => void;
+  syncStatus?: SyncStatus;
+  onSignIn?: () => void;
+  onSignOut?: () => void;
 }
 
-export function Calendar({ year, hasNote, onDayClick, onYearChange }: CalendarProps) {
+export function Calendar({
+  year,
+  hasNote,
+  onDayClick,
+  onYearChange,
+  syncStatus,
+  onSignIn,
+  onSignOut
+}: CalendarProps) {
   const months = Array.from({ length: 12 }, (_, i) => i);
   const hasAutoScrolledRef = useRef(false);
 
@@ -52,6 +65,19 @@ export function Calendar({ year, hasNote, onDayClick, onYearChange }: CalendarPr
         >
           →
         </Button>
+        <div className="calendar__header-actions">
+          {syncStatus && <SyncIndicator status={syncStatus} />}
+          {onSignIn && (
+            <button className="calendar__auth" onClick={onSignIn}>
+              Sign in to sync
+            </button>
+          )}
+          {onSignOut && (
+            <button className="calendar__auth" onClick={onSignOut}>
+              Sign out
+            </button>
+          )}
+        </div>
       </div>
       <div className="calendar__grid">
         {months.map(month => (

@@ -8,7 +8,8 @@ A minimalist daily notes application built with React and TypeScript. Write one 
 - **Year View Calendar**: See your entire year in a beautiful, responsive calendar grid
 - **Visual Indicators**: Days with notes show a small dot indicator
 - **Read-Only Past**: View past notes but can only edit today's note
-- **Local Storage**: All your notes are stored locally in your browser - no server, no tracking
+- **Local-First**: Notes live locally by default with optional cloud sync
+- **End-to-End Encrypted Sync**: Notes are encrypted before they leave your device
 - **Fully Responsive**: Works beautifully on desktop, tablet, and mobile
 - **URL-Based Navigation**: Shareable URLs with year and date parameters
 - **Keyboard Shortcuts**: Press Escape to close the note editor
@@ -23,7 +24,8 @@ Visit the live demo: [Add your deployment URL here]
 - **TypeScript** - Type safety
 - **Vite** - Fast build tool and dev server
 - **CSS Custom Properties** - Theming system
-- **LocalStorage API** - Data persistence
+- **IndexedDB** - Local persistence
+- **Supabase** - Optional sync backend
 
 ## Getting Started
 
@@ -145,6 +147,13 @@ This is a standard Vite + React app and can be deployed to:
 - Use the left/right arrow buttons to move between years
 - Click the year button to jump back to the current year
 
+## User Flow
+
+1. Open the app and start writing immediately (local mode by default).
+2. After your first note, you can choose to sign in and sync, or keep using it locally.
+3. Signing in creates a cloud account and migrates your existing local notes.
+4. You can keep working offline; sync catches up when you are back online.
+
 ## Project Structure
 
 ```
@@ -158,26 +167,30 @@ src/
 │   ├── useNotes.ts             # Note CRUD operations
 │   └── useUrlState.ts          # URL state management
 ├── storage/
-│   └── noteStorage.ts          # LocalStorage abstraction
+│   ├── noteStorage.ts          # Local encrypted notes
+│   ├── syncedNoteRepository.ts # Local sync cache + conflict handling
+│   └── vault.ts                # Key management
 ├── utils/
 │   ├── date.ts                 # Date utilities
 │   └── constants.ts            # App constants
 └── styles/                     # CSS modules and themes
 ```
 
-## Data Storage
+## Encryption and Data Storage
 
-Notes are stored in your browser's localStorage with the key format:
-```
-dailynote_{DD-MM-YYYY}
-```
+### Local mode (default)
+- A device-bound vault key is created on first load without prompting.
+- Notes are encrypted with AES-GCM and stored in IndexedDB.
+- The vault can auto-unlock using a non-exportable device key stored in IndexedDB.
 
-Each note contains:
-- `date`: The note's date (DD-MM-YYYY)
-- `content`: Your note text
-- `updatedAt`: Last modification timestamp
+### Cloud mode (optional)
+- When you sign in, a password-derived key wraps the same vault key.
+- Notes are encrypted client-side before syncing to Supabase.
+- A local encrypted cache is kept for offline use and conflict resolution.
 
-**Note**: Clearing browser data will delete all notes. Consider using browser export/import features or the export functionality (if added) to backup your notes.
+### Data durability
+- Clearing browser data deletes local notes and local keys.
+- Cloud sync acts as a backup once you sign in.
 
 ## Browser Support
 

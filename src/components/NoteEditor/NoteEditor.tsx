@@ -41,7 +41,6 @@ export function NoteEditor({
     <NoteEditorView
       formattedDate={formattedDate}
       isEditable={isEditable}
-      isClosing={isClosing}
       showReadonlyBadge={!canEdit}
       statusText={statusText}
       editorRef={editorRef}

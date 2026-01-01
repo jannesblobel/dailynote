@@ -13,7 +13,7 @@ interface MonthGridProps {
   year: number;
   month: number;
   hasNote: (date: string) => boolean;
-  onDayClick: (date: string) => void;
+  onDayClick?: (date: string) => void;
 }
 
 export function MonthGrid({ year, month, hasNote, onDayClick }: MonthGridProps) {
@@ -64,7 +64,7 @@ export function MonthGrid({ year, month, hasNote, onDayClick }: MonthGridProps) 
               day={cell.day}
               state={state}
               hasNote={hasNote(dateStr)}
-              onClick={() => onDayClick(dateStr)}
+              onClick={onDayClick ? () => onDayClick(dateStr) : undefined}
             />
           );
         })}

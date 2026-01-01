@@ -4,6 +4,13 @@ export interface Note {
   updatedAt: string; // ISO timestamp
 }
 
+export interface SyncedNote extends Note {
+  id?: string;
+  revision: number;
+  serverUpdatedAt?: string;
+  deleted?: boolean;
+}
+
 export type ViewType = 'note' | 'calendar';
 
 export interface UrlState {
@@ -13,3 +20,5 @@ export interface UrlState {
 }
 
 export type DayCellState = 'empty' | 'past' | 'today' | 'future';
+
+export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'offline' | 'error';

@@ -3,7 +3,6 @@ import type { ClipboardEvent, FormEvent, RefObject } from 'react';
 interface NoteEditorViewProps {
   formattedDate: string;
   isEditable: boolean;
-  isClosing: boolean;
   showReadonlyBadge: boolean;
   statusText: string | null;
   editorRef: RefObject<HTMLDivElement | null>;
@@ -14,7 +13,6 @@ interface NoteEditorViewProps {
 export function NoteEditorView({
   formattedDate,
   isEditable,
-  isClosing,
   showReadonlyBadge,
   statusText,
   editorRef,

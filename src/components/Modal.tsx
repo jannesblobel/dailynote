@@ -5,9 +5,10 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children: ReactNode;
+  variant?: 'default' | 'overlay';
 }
 
-export function Modal({ isOpen, onClose, children }: ModalProps) {
+export function Modal({ isOpen, onClose, children, variant = 'default' }: ModalProps) {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
@@ -33,6 +34,15 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
   }, [isOpen, handleKeyDown]);
 
   if (!isOpen) return null;
+
+  // Overlay variant: just backdrop + children, no modal-content wrapper
+  if (variant === 'overlay') {
+    return (
+      <div className="modal-backdrop" onClick={handleBackdropClick}>
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="modal-backdrop" onClick={handleBackdropClick}>

@@ -5,9 +5,10 @@ interface VaultUnlockProps {
   isBusy: boolean;
   error: string | null;
   onUnlock: (password: string) => void;
+  onSwitchToCloud?: () => void;
 }
 
-export function VaultUnlock({ mode, isBusy, error, onUnlock }: VaultUnlockProps) {
+export function VaultUnlock({ mode, isBusy, error, onUnlock, onSwitchToCloud }: VaultUnlockProps) {
   const [password, setPassword] = useState('');
 
   const title = mode === 'setup' ? 'Set your vault password' : 'Unlock your notes';
@@ -49,6 +50,19 @@ export function VaultUnlock({ mode, isBusy, error, onUnlock }: VaultUnlockProps)
         <p className="vault-unlock__note">
           This browser remembers your unlock without storing the password.
         </p>
+        {onSwitchToCloud && (
+          <p className="vault-unlock__note">
+            Want to sync across devices?{' '}
+            <button
+              type="button"
+              className="auth-form__toggle"
+              onClick={onSwitchToCloud}
+              disabled={isBusy}
+            >
+              Sign in to sync
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );
