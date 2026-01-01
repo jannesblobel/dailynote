@@ -1,8 +1,8 @@
-# Daily Notes - Project Documentation
+# DailyNote - Project Documentation
 
 ## Overview
 
-A minimalist daily notes application built with React, TypeScript, and Vite. The app allows users to write notes for today and view past notes in a year-view calendar interface.
+A minimalist daily note application built with React, TypeScript, and Vite. The app allows users to write notes for today and view past notes in a year-view calendar interface.
 
 ## Core Concepts
 

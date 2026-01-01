@@ -36,8 +36,8 @@ Visit the live demo: [Add your deployment URL here]
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/dailynotes.git
-cd dailynotes
+git clone https://github.com/yourusername/dailynote.git
+cd dailynote
 ```
 
 2. Install dependencies:
@@ -94,7 +94,7 @@ This project includes Wrangler configuration for deployment to Cloudflare's new 
    yarn cf:deploy
    ```
 
-3. Your site will be live at `https://dailynotes.pages.dev`
+3. Your site will be live at `https://dailynote.pages.dev`
 
 **Method 2: Git Integration (Legacy Pages Tab)**
 

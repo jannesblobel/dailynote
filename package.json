@@ -1,8 +1,8 @@
 {
-  "name": "dailynotes",
+  "name": "dailynote",
   "private": true,
   "version": "1.0.0",
-  "description": "A minimalist daily notes application - one note per day, forever",
+  "description": "A minimalist daily note application - one note per day, forever",
   "author": "Ivan",
   "type": "module",
   "scripts": {
