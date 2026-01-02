@@ -72,7 +72,7 @@ export function NoteEditor({
     if (editorRef.current && imageRepository) {
       resolveImageUrls(editorRef.current, imageRepository);
     }
-  }, [content, imageRepository]);
+  }, [content, imageRepository, editorRef]);
 
   return (
     <NoteEditorView
