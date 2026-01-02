@@ -142,7 +142,6 @@ A single IDB schema is used regardless of auth state.
 - `notes` table fields:
   - id, user_id, date, ciphertext, nonce, key_id, revision, updated_at, server_updated_at, deleted
 - `server_updated_at` should be set by the DB (trigger or default). Must be monotonically increasing for cursor use.
-- `note_index` can remain for calendar performance, but is not a source of truth for deletes.
 
 ## 8.1) Supabase Schema (Keyrings)
 - `user_keyrings` table fields:
@@ -160,7 +159,7 @@ A single IDB schema is used regardless of auth state.
 - Enforce strict max dimensions + compression before encryption (target 200–600KB).
 - Generate encrypted thumbnails (~320px long edge) for fast list/calendar views.
 - Deduplicate uploads via sha256.
-- Avoid per-note read for calendar by relying on index/cursor.
+- Avoid per-note read for calendar by relying on local cache after sync.
 
 ## 11) Migration
 ### 11.1 Legacy Stores
@@ -190,4 +189,3 @@ A single IDB schema is used regardless of auth state.
 
 ## 14) Open Decisions
 - Cursor semantics: use `server_updated_at` vs dedicated `updated_seq`.
-- Whether to keep `note_index` and how to maintain it for calendar views.

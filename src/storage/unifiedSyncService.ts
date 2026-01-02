@@ -125,7 +125,15 @@ export async function pushRemoteNote(
     }
 
     const { data, error } = await query.select().maybeSingle();
-    if (error) throw error;
+    if (error) {
+      if ('status' in error && error.status === 404) {
+        throw new RevisionConflictError();
+      }
+      if ('code' in error && error.code === 'PGRST116') {
+        throw new RevisionConflictError();
+      }
+      throw error;
+    }
     if (!data) throw new RevisionConflictError();
     return mapRemoteRow(data as RemoteNoteRow);
   }
@@ -136,6 +144,14 @@ export async function pushRemoteNote(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if ('status' in error && error.status === 404) {
+      throw new RevisionConflictError();
+    }
+    if ('code' in error && error.code === 'PGRST116') {
+      throw new RevisionConflictError();
+    }
+    throw error;
+  }
   return mapRemoteRow(data as RemoteNoteRow);
 }

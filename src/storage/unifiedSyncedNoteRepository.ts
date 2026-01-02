@@ -175,22 +175,31 @@ export function createUnifiedSyncedNoteRepository(
           );
 
           if (winner === 'local') {
-            const rebasedRevision = Math.max(meta.revision, remote.revision + 1);
-            const rebased = await pushRemoteNote(supabase, userId, {
-              id: meta.remoteId ?? remote.id,
-              date: record.date,
-              ciphertext: record.ciphertext,
-              nonce: record.nonce,
-              keyId: record.keyId ?? keyring.activeKeyId,
-              revision: rebasedRevision,
-              updatedAt: record.updatedAt,
-              serverUpdatedAt: remote.serverUpdatedAt,
-              deleted: false
-            });
-            await setNoteAndMeta(toLocalRecord(rebased), {
-              ...toLocalMeta(rebased),
-              lastSyncedAt: now
-            });
+            try {
+              const rebasedRevision = Math.max(meta.revision, remote.revision + 1);
+              const rebased = await pushRemoteNote(supabase, userId, {
+                id: meta.remoteId ?? remote.id,
+                date: record.date,
+                ciphertext: record.ciphertext,
+                nonce: record.nonce,
+                keyId: record.keyId ?? keyring.activeKeyId,
+                revision: rebasedRevision,
+                updatedAt: record.updatedAt,
+                serverUpdatedAt: remote.serverUpdatedAt,
+                deleted: false
+              });
+              await setNoteAndMeta(toLocalRecord(rebased), {
+                ...toLocalMeta(rebased),
+                lastSyncedAt: now
+              });
+            } catch (rebaseError) {
+              // If rebased push fails, accept remote to avoid infinite conflict
+              console.warn('Rebased push failed, accepting remote version:', rebaseError);
+              await setNoteAndMeta(toLocalRecord(remote), {
+                ...toLocalMeta(remote),
+                lastSyncedAt: now
+              });
+            }
           } else {
             await setNoteAndMeta(toLocalRecord(remote), {
               ...toLocalMeta(remote),

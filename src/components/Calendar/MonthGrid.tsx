@@ -63,6 +63,7 @@ export function MonthGrid({ year, month, hasNote, onDayClick }: MonthGridProps) 
             <DayCell
               key={index}
               day={cell.day}
+              date={cell.date}
               state={state}
               hasNote={hasNote(dateStr)}
               onClick={onDayClick ? () => onDayClick(dateStr) : undefined}

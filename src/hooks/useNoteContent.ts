@@ -2,8 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NoteRepository } from '../storage/noteRepository';
 import { isContentEmpty } from '../utils/sanitize';
 
-const MIN_DECRYPT_MS = 0;
-
 interface UseNoteContentReturn {
   content: string;
   setContent: (content: string) => void;
@@ -21,115 +19,116 @@ export function useNoteContent(
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [hasEdits, setHasEdits] = useState(false);
   const [isContentReady, setIsContentReady] = useState(false);
+
   const saveTimeoutRef = useRef<number | null>(null);
   const pendingSaveRef = useRef<Promise<void> | null>(null);
-  const latestContentRef = useRef('');
-  const shouldDelayDecryptRef = useRef(true);
-  const hasEditsRef = useRef(false);
-  const isContentReadyRef = useRef(false);
-  const contentCacheRef = useRef<Map<string, string>>(new Map());
+  const contentRef = useRef('');
+  const dateRef = useRef<string | null>(null);
+  const repoRef = useRef<NoteRepository | null>(null);
 
+  // Save function that uses refs (can be called from cleanup)
+  const flushSave = useCallback(() => {
+    const currentContent = contentRef.current;
+    const currentDate = dateRef.current;
+    const currentRepo = repoRef.current;
+
+    if (!currentDate || !currentRepo) return;
+
+    // Queue the save
+    pendingSaveRef.current = (pendingSaveRef.current ?? Promise.resolve()).then(async () => {
+      try {
+        if (!isContentEmpty(currentContent)) {
+          await currentRepo.save(currentDate, currentContent);
+        } else {
+          await currentRepo.delete(currentDate);
+        }
+        onAfterSave?.();
+      } catch (error) {
+        console.error('Failed to save note:', error);
+      }
+    });
+  }, [onAfterSave]);
+
+  // Load content when date/repository changes
   useEffect(() => {
-    setHasEdits(false);
-    hasEditsRef.current = false;
+    // Save before switching dates
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+      flushSave();
+    }
+
+    dateRef.current = date;
+    repoRef.current = repository;
+    queueMicrotask(() => setHasEdits(false));
+
     if (!date || !repository) {
-      setContentState('');
-      setIsDecrypting(false);
-      latestContentRef.current = '';
-      setIsContentReady(false);
-      isContentReadyRef.current = false;
+      contentRef.current = '';
+      queueMicrotask(() => {
+        setContentState('');
+        setIsDecrypting(false);
+        setIsContentReady(false);
+      });
       return;
     }
+
     let cancelled = false;
-    setIsDecrypting(true);
-    setIsContentReady(false);
-    isContentReadyRef.current = false;
-    const start = performance.now();
+    queueMicrotask(() => {
+      setIsDecrypting(true);
+      setIsContentReady(false);
+    });
 
     const load = async () => {
-      let loaded = false;
       try {
         const note = await repository.get(date);
-        let nextContent = note?.content ?? '';
-        if (!note) {
-          await new Promise(resolve => setTimeout(resolve, 250));
-          if (!cancelled) {
-            const retryNote = await repository.get(date);
-            nextContent = retryNote?.content ?? '';
-          }
-        }
+        const loadedContent = note?.content ?? '';
+
         if (!cancelled) {
-          setContentState(nextContent);
-          latestContentRef.current = nextContent;
-          contentCacheRef.current.set(date, nextContent);
-        }
-        loaded = true;
-      } catch (error) {
-        if (!cancelled) {
-          const cached = contentCacheRef.current.get(date);
-          if (typeof cached === 'string') {
-            setContentState(cached);
-            latestContentRef.current = cached;
-            loaded = true;
-          } else {
-            console.warn('Failed to load note content:', error);
-          }
-        }
-      } finally {
-        if (shouldDelayDecryptRef.current) {
-          const elapsed = performance.now() - start;
-          const remaining = MIN_DECRYPT_MS - elapsed;
-          if (remaining > 0) {
-            await new Promise(resolve => setTimeout(resolve, remaining));
-          }
-          shouldDelayDecryptRef.current = false;
-        }
-        if (!cancelled) {
+          setContentState(loadedContent);
+          contentRef.current = loadedContent;
           setIsDecrypting(false);
-          setIsContentReady(loaded);
-          isContentReadyRef.current = loaded;
+          setIsContentReady(true);
+        }
+      } catch (error) {
+        console.error('Failed to load note:', error);
+        if (!cancelled) {
+          setContentState('');
+          contentRef.current = '';
+          setIsDecrypting(false);
+          setIsContentReady(true);
         }
       }
     };
+
     void load();
+
     return () => {
       cancelled = true;
     };
-  }, [date, repository]);
+  }, [date, repository, flushSave]);
 
-  const flushSave = useCallback(() => {
-    if (!date || !repository) return;
-    if (!isContentReadyRef.current || !hasEditsRef.current) return;
-    const contentToSave = latestContentRef.current;
-    pendingSaveRef.current = (pendingSaveRef.current ?? Promise.resolve()).then(async () => {
-      if (!isContentEmpty(contentToSave)) {
-        await repository.save(date, contentToSave);
-      } else {
-        await repository.delete(date);
-      }
-      onAfterSave?.();
-    });
-  }, [date, repository, onAfterSave]);
-
+  // Update content
   const setContent = useCallback((newContent: string) => {
-    if (!date || !repository || !isContentReady) return;
-    if (newContent !== latestContentRef.current) {
-      setHasEdits(true);
-      hasEditsRef.current = true;
-    }
-    latestContentRef.current = newContent;
-    setContentState(newContent);
+    if (!isContentReady) return;
 
+    setContentState(newContent);
+    contentRef.current = newContent;
+    setHasEdits(true);
+
+    // Clear existing timeout
     if (saveTimeoutRef.current !== null) {
       window.clearTimeout(saveTimeoutRef.current);
     }
 
+    // Debounce save
     saveTimeoutRef.current = window.setTimeout(() => {
       saveTimeoutRef.current = null;
       flushSave();
+      setHasEdits(false);
     }, 400);
-  }, [date, repository, flushSave, isContentReady]);
+  }, [isContentReady, flushSave]);
 
+  // Save on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current !== null) {

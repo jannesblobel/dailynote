@@ -47,7 +47,7 @@ export function useContentEditable({
   onDropComplete
 }: ContentEditableOptions) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const lastContentRef = useRef(content);
+  const lastContentRef = useRef('');  // Always start with empty, don't capture initial content
   const dropRangeRef = useRef<Range | null>(null);
 
   const handleInput = useCallback((e: FormEvent<HTMLDivElement>) => {

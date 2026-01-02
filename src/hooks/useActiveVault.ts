@@ -137,8 +137,10 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
     return merged;
   }, [localKeyring, cloudVault.keyring, cloudVault.primaryKeyId]);
 
-  const activeKeyId =
+  const candidateKeyId =
     mode === AppMode.Cloud && cloudVault.primaryKeyId ? cloudVault.primaryKeyId : localKeyId;
+  const activeKeyId =
+    candidateKeyId && mergedKeyring.has(candidateKeyId) ? candidateKeyId : null;
   const vaultKey = activeKeyId ? mergedKeyring.get(activeKeyId) ?? null : null;
   const isVaultReady = mode === AppMode.Cloud ? cloudVault.isReady : localVault.isReady;
   const isVaultLocked = mode === AppMode.Cloud ? cloudVault.isLocked : localVault.isLocked;

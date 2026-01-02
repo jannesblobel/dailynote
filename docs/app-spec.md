@@ -268,12 +268,9 @@ Refs: src/storage/cloudCache.ts, src/storage/vault.ts
 
 Refs: src/storage/cloudImageStorage.ts, src/utils/imageResolver.ts
 
-## I) Note Index vs Notes Table
-- note_index is updated via trigger on notes table.
-- Any failed triggers or delayed propagation can make the index lag behind actual
-  note state, affecting date lists and deletion checks.
-
-Ref: supabase/migrations/20260101_create_note_index.sql
+## I) Note Dates Source
+- Date lists are derived from the notes table (local cache after sync).
+- No separate index table is maintained, so date presence matches note records.
 
 ## J) Content Sanitization Differences
 - Content is sanitized on save and on decrypt.
