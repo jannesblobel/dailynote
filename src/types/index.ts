@@ -2,6 +2,7 @@ export interface Note {
   date: string; // "DD-MM-YYYY"
   content: string;
   updatedAt: string; // ISO timestamp
+  backgroundImageId?: string; // Reference to background image
 }
 
 export interface SyncedNote extends Note {
@@ -9,6 +10,18 @@ export interface SyncedNote extends Note {
   revision: number;
   serverUpdatedAt?: string;
   deleted?: boolean;
+}
+
+export interface NoteImage {
+  id: string; // UUID for the image
+  noteDate: string; // DD-MM-YYYY format
+  type: 'background' | 'inline'; // Where the image is used
+  filename: string; // Original filename
+  mimeType: string; // image/jpeg, image/png, etc.
+  width: number; // Original dimensions for layout
+  height: number;
+  size: number; // File size in bytes
+  createdAt: string; // ISO timestamp
 }
 
 export const AuthState = {

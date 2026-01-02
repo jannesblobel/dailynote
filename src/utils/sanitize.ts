@@ -2,14 +2,14 @@ import DOMPurify from 'dompurify';
 
 /**
  * Configuration for DOMPurify
- * Only allows basic formatting tags
+ * Allows basic formatting tags and images with data-image-id
  */
 const SANITIZE_CONFIG = {
   ALLOWED_TAGS: [
     'b', 'i', 'em', 'strong', 'u', 's', 'strike', 'del',
-    'br', 'p', 'div', 'span'
+    'br', 'p', 'div', 'span', 'img'
   ],
-  ALLOWED_ATTR: [], // No attributes needed for basic formatting
+  ALLOWED_ATTR: ['data-image-id', 'alt', 'width', 'height'], // Image attributes (src set dynamically)
   KEEP_CONTENT: true, // Keep text content even if tags are stripped
   RETURN_DOM: false,
   RETURN_DOM_FRAGMENT: false,

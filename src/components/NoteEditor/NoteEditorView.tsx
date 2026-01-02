@@ -1,4 +1,4 @@
-import type { ClipboardEvent, FormEvent, RefObject } from 'react';
+import type { ClipboardEvent, DragEvent, FormEvent, RefObject } from 'react';
 
 interface NoteEditorViewProps {
   formattedDate: string;
@@ -8,6 +8,9 @@ interface NoteEditorViewProps {
   editorRef: RefObject<HTMLDivElement | null>;
   onInput: (e: FormEvent<HTMLDivElement>) => void;
   onPaste: (e: ClipboardEvent<HTMLDivElement>) => void;
+  onDrop?: (e: DragEvent<HTMLDivElement>) => void;
+  onDragOver?: (e: DragEvent<HTMLDivElement>) => void;
+  backgroundImageUrl?: string | null;
 }
 
 export function NoteEditorView({
@@ -17,8 +20,19 @@ export function NoteEditorView({
   statusText,
   editorRef,
   onInput,
-  onPaste
+  onPaste,
+  onDrop,
+  onDragOver,
+  backgroundImageUrl
 }: NoteEditorViewProps) {
+  const hasBackground = !!backgroundImageUrl;
+  const bodyClassName = `note-editor__body ${hasBackground ? 'note-editor__body--has-background' : ''}`.trim();
+  const contentClassName = `note-editor__content ${hasBackground ? 'note-editor__content--with-background' : ''}`.trim();
+
+  const bodyStyle = hasBackground && backgroundImageUrl
+    ? { backgroundImage: `url(${backgroundImageUrl})` }
+    : undefined;
+
   return (
     <div className="note-editor">
       <div className="note-editor__header">
@@ -32,13 +46,15 @@ export function NoteEditorView({
           <span className="note-editor__saving">{statusText}</span>
         )}
       </div>
-      <div className="note-editor__body">
+      <div className={bodyClassName} style={bodyStyle}>
         <div
           ref={editorRef}
-          className="note-editor__content"
+          className={contentClassName}
           contentEditable={isEditable}
           onInput={onInput}
           onPaste={onPaste}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
           data-placeholder={isEditable ? 'Write your note for today...' : 'No note for this day'}
           suppressContentEditableWarning
         />

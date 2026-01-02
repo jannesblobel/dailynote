@@ -1,4 +1,4 @@
-import type { ClipboardEvent, FormEvent } from 'react';
+import type { ClipboardEvent, DragEvent, FormEvent } from 'react';
 import { useCallback, useEffect, useRef } from 'react';
 import { sanitizeHtml } from '../../utils/sanitize';
 
@@ -7,13 +7,15 @@ interface ContentEditableOptions {
   isEditable: boolean;
   onChange: (content: string) => void;
   onUserInput?: () => void;
+  onImageDrop?: (file: File) => Promise<string>; // Returns image ID
 }
 
 export function useContentEditable({
   content,
   isEditable,
   onChange,
-  onUserInput
+  onUserInput,
+  onImageDrop
 }: ContentEditableOptions) {
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -24,9 +26,54 @@ export function useContentEditable({
     onUserInput?.();
   }, [onChange, onUserInput]);
 
-  const handlePaste = useCallback((e: ClipboardEvent<HTMLDivElement>) => {
+  const handlePaste = useCallback(async (e: ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
 
+    // Check for image in clipboard first
+    const items = Array.from(e.clipboardData.items);
+    const imageItem = items.find(item => item.type.startsWith('image/'));
+
+    if (imageItem && onImageDrop) {
+      const file = imageItem.getAsFile();
+      if (file) {
+        try {
+          // Insert placeholder
+          const placeholder = '<img data-image-id="uploading" alt="Uploading..." />';
+          document.execCommand('insertHTML', false, placeholder);
+          onUserInput?.();
+
+          // Upload image
+          const imageId = await onImageDrop(file);
+
+          // Replace placeholder with actual image
+          if (editorRef.current) {
+            const html = editorRef.current.innerHTML;
+            const updated = html.replace(
+              '<img data-image-id="uploading" alt="Uploading...">',
+              `<img data-image-id="${imageId}" alt="${file.name}" />`
+            );
+            editorRef.current.innerHTML = updated;
+            const sanitized = sanitizeHtml(editorRef.current.innerHTML);
+            onChange(sanitized);
+          }
+        } catch (error) {
+          console.error('Failed to upload pasted image:', error);
+          // Remove placeholder on error
+          if (editorRef.current) {
+            const html = editorRef.current.innerHTML;
+            const updated = html.replace(
+              '<img data-image-id="uploading" alt="Uploading...">',
+              ''
+            );
+            editorRef.current.innerHTML = updated;
+            onChange(sanitizeHtml(editorRef.current.innerHTML));
+          }
+        }
+        return;
+      }
+    }
+
+    // Fall back to text/HTML paste
     const html = e.clipboardData.getData('text/html');
     const text = e.clipboardData.getData('text/plain');
     if (html) {
@@ -36,7 +83,66 @@ export function useContentEditable({
       document.execCommand('insertText', false, text);
     }
     onUserInput?.();
-  }, [onUserInput]);
+  }, [onUserInput, onImageDrop, onChange]);
+
+  const handleDrop = useCallback(async (e: DragEvent<HTMLDivElement>) => {
+    if (!isEditable || !onImageDrop) return;
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    // Check if first file is an image
+    const file = files[0];
+    if (!file.type.startsWith('image/')) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      // Insert placeholder at drop position
+      const placeholder = '<img data-image-id="uploading" alt="Uploading..." />';
+      document.execCommand('insertHTML', false, placeholder);
+      onUserInput?.();
+
+      // Upload image
+      const imageId = await onImageDrop(file);
+
+      // Replace placeholder with actual image
+      if (editorRef.current) {
+        const html = editorRef.current.innerHTML;
+        const updated = html.replace(
+          '<img data-image-id="uploading" alt="Uploading...">',
+          `<img data-image-id="${imageId}" alt="${file.name}" />`
+        );
+        editorRef.current.innerHTML = updated;
+        const sanitized = sanitizeHtml(editorRef.current.innerHTML);
+        onChange(sanitized);
+      }
+    } catch (error) {
+      console.error('Failed to upload dropped image:', error);
+      // Remove placeholder on error
+      if (editorRef.current) {
+        const html = editorRef.current.innerHTML;
+        const updated = html.replace(
+          '<img data-image-id="uploading" alt="Uploading...">',
+          ''
+        );
+        editorRef.current.innerHTML = updated;
+        onChange(sanitizeHtml(editorRef.current.innerHTML));
+      }
+    }
+  }, [isEditable, onImageDrop, onUserInput, onChange]);
+
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    if (!isEditable || !onImageDrop) return;
+
+    // Check if dragging files
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, [isEditable, onImageDrop]);
 
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== content) {
@@ -60,5 +166,5 @@ export function useContentEditable({
     }
   }, [isEditable]);
 
-  return { editorRef, handleInput, handlePaste };
+  return { editorRef, handleInput, handlePaste, handleDrop, handleDragOver };
 }

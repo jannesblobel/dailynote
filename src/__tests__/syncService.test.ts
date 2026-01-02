@@ -34,7 +34,7 @@ describe('syncService encryption', () => {
     expect(decrypted).toEqual({
       id: note.id,
       date: note.date,
-      content: 'Hello',
+      content: '<img>Hello', // img tag allowed but dangerous attributes stripped
       updatedAt: note.updatedAt,
       revision: note.revision,
       deleted: note.deleted,
