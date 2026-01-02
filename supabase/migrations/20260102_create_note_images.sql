@@ -5,21 +5,24 @@ ON CONFLICT (id) DO NOTHING;
 
 -- RLS policies for storage bucket
 -- Users can only access their own images (path format: {userId}/{imageId}.{ext})
-CREATE POLICY IF NOT EXISTS "Users can view own images"
+DROP POLICY IF EXISTS "Users can view own images" ON storage.objects;
+CREATE POLICY "Users can view own images"
 ON storage.objects FOR SELECT
 USING (
   bucket_id = 'note-images' AND
   auth.uid()::text = (storage.foldername(name))[1]
 );
 
-CREATE POLICY IF NOT EXISTS "Users can upload own images"
+DROP POLICY IF EXISTS "Users can upload own images" ON storage.objects;
+CREATE POLICY "Users can upload own images"
 ON storage.objects FOR INSERT
 WITH CHECK (
   bucket_id = 'note-images' AND
   auth.uid()::text = (storage.foldername(name))[1]
 );
 
-CREATE POLICY IF NOT EXISTS "Users can delete own images"
+DROP POLICY IF EXISTS "Users can delete own images" ON storage.objects;
+CREATE POLICY "Users can delete own images"
 ON storage.objects FOR DELETE
 USING (
   bucket_id = 'note-images' AND
@@ -45,15 +48,18 @@ CREATE TABLE IF NOT EXISTS note_images (
 ALTER TABLE note_images ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for note_images table
-CREATE POLICY IF NOT EXISTS "Users can view own image metadata"
+DROP POLICY IF EXISTS "Users can view own image metadata" ON note_images;
+CREATE POLICY "Users can view own image metadata"
 ON note_images FOR SELECT
 USING (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS "Users can insert own image metadata"
+DROP POLICY IF EXISTS "Users can insert own image metadata" ON note_images;
+CREATE POLICY "Users can insert own image metadata"
 ON note_images FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS "Users can delete own image metadata"
+DROP POLICY IF EXISTS "Users can delete own image metadata" ON note_images;
+CREATE POLICY "Users can delete own image metadata"
 ON note_images FOR DELETE
 USING (auth.uid() = user_id);
 
