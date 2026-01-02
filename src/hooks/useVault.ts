@@ -47,16 +47,25 @@ export function useVault({
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const unlockingRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
+  const userId = user?.id ?? null;
 
   // Try device unlock when user signs in
   useEffect(() => {
-    if (!user) {
-        setVaultKey(null);
-        setKeyring(new Map());
-        setPrimaryKeyId(null);
-        setIsReady(true);
-        return;
+    if (!userId) {
+      lastUserIdRef.current = null;
+      setVaultKey(null);
+      setKeyring(new Map());
+      setPrimaryKeyId(null);
+      setIsReady(true);
+      return;
     }
+
+    if (lastUserIdRef.current === userId) {
+      return;
+    }
+
+    lastUserIdRef.current = userId;
 
     let cancelled = false;
 
@@ -78,7 +87,7 @@ export function useVault({
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [userId]);
 
   // Unlock with password when provided
   useEffect(() => {

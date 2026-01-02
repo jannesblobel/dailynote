@@ -63,6 +63,26 @@ export async function fetchRemoteNoteByDate(
   return mapRemoteRow(data as RemoteNoteRow);
 }
 
+export async function fetchRemoteNoteDates(
+  supabase: SupabaseClient,
+  userId: string,
+  year?: number
+): Promise<string[]> {
+  let query = supabase
+    .from('notes')
+    .select('date')
+    .eq('user_id', userId)
+    .eq('deleted', false);
+
+  if (typeof year === 'number') {
+    query = query.like('date', `%${year}`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map((row) => String((row as { date: string }).date));
+}
+
 export async function fetchRemoteNotesSince(
   supabase: SupabaseClient,
   userId: string,

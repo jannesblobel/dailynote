@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Note } from '../types';
 import type { NoteRepository } from '../storage/noteRepository';
 import { isContentEmpty } from '../utils/sanitize';
 
@@ -23,6 +24,7 @@ export function useNoteContent(
   const saveTimeoutRef = useRef<number | null>(null);
   const pendingSaveRef = useRef<Promise<void> | null>(null);
   const contentRef = useRef('');
+  const hasEditsRef = useRef(false);
   const dateRef = useRef<string | null>(null);
   const repoRef = useRef<NoteRepository | null>(null);
 
@@ -60,7 +62,10 @@ export function useNoteContent(
 
     dateRef.current = date;
     repoRef.current = repository;
-    queueMicrotask(() => setHasEdits(false));
+    queueMicrotask(() => {
+      hasEditsRef.current = false;
+      setHasEdits(false);
+    });
 
     if (!date || !repository) {
       contentRef.current = '';
@@ -80,6 +85,28 @@ export function useNoteContent(
 
     const load = async () => {
       try {
+        if ('getWithRefresh' in repository && typeof repository.getWithRefresh === 'function') {
+          const note = await repository.getWithRefresh(date, (remoteNote: Note | null) => {
+            if (cancelled || dateRef.current !== date) return;
+            if (hasEditsRef.current) return;
+            const updatedContent = remoteNote?.content ?? '';
+            setContentState(updatedContent);
+            contentRef.current = updatedContent;
+            setIsDecrypting(false);
+            setIsContentReady(true);
+            hasEditsRef.current = false;
+            setHasEdits(false);
+          });
+          const loadedContent = note?.content ?? '';
+          if (!cancelled) {
+            setContentState(loadedContent);
+            contentRef.current = loadedContent;
+            setIsDecrypting(false);
+            setIsContentReady(true);
+          }
+          return;
+        }
+
         const note = await repository.get(date);
         const loadedContent = note?.content ?? '';
 
@@ -113,6 +140,7 @@ export function useNoteContent(
 
     setContentState(newContent);
     contentRef.current = newContent;
+    hasEditsRef.current = true;
     setHasEdits(true);
 
     // Clear existing timeout
@@ -124,6 +152,7 @@ export function useNoteContent(
     saveTimeoutRef.current = window.setTimeout(() => {
       saveTimeoutRef.current = null;
       flushSave();
+      hasEditsRef.current = false;
       setHasEdits(false);
     }, 400);
   }, [isContentReady, flushSave]);

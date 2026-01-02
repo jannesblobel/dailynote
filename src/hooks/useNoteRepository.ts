@@ -7,11 +7,11 @@ import { supabase } from '../lib/supabase';
 import { createUnifiedNoteRepository } from '../storage/unifiedNoteRepository';
 import { createUnifiedSyncedNoteRepository } from '../storage/unifiedSyncedNoteRepository';
 import { createUnifiedImageRepository } from '../storage/unifiedImageRepository';
+import { createUnifiedSyncedImageRepository } from '../storage/unifiedSyncedImageRepository';
 import type { UnifiedSyncedNoteRepository } from '../storage/unifiedSyncedNoteRepository';
 import type { NoteRepository } from '../storage/noteRepository';
 import type { ImageRepository } from '../storage/imageRepository';
 import { AppMode } from './useAppMode';
-import { SyncStatus } from '../types';
 
 interface UseNoteRepositoryProps {
   mode: AppMode;
@@ -48,6 +48,7 @@ export function useNoteRepository({
   date,
   year
 }: UseNoteRepositoryProps): UseNoteRepositoryReturn {
+  const userId = authUser?.id ?? null;
   const repository = useMemo<NoteRepository | UnifiedSyncedNoteRepository | null>(() => {
     if (!vaultKey || !activeKeyId) return null;
     const keyProvider = {
@@ -55,12 +56,12 @@ export function useNoteRepository({
       getKey: (keyId: string) => keyring.get(keyId) ?? null
     };
 
-    if (mode === AppMode.Cloud && authUser) {
-      return createUnifiedSyncedNoteRepository(supabase, authUser.id, keyProvider);
+    if (mode === AppMode.Cloud && userId) {
+      return createUnifiedSyncedNoteRepository(supabase, userId, keyProvider);
     }
 
     return createUnifiedNoteRepository(keyProvider);
-  }, [mode, authUser, vaultKey, keyring, activeKeyId]);
+  }, [mode, userId, vaultKey, keyring, activeKeyId]);
 
   const imageRepository = useMemo<ImageRepository | null>(() => {
     if (!vaultKey || !activeKeyId) return null;
@@ -68,11 +69,14 @@ export function useNoteRepository({
       activeKeyId,
       getKey: (keyId: string) => keyring.get(keyId) ?? null
     };
+    if (mode === AppMode.Cloud && userId) {
+      return createUnifiedSyncedImageRepository(supabase, userId, keyProvider);
+    }
     return createUnifiedImageRepository(keyProvider);
-  }, [vaultKey, keyring, activeKeyId]);
+  }, [vaultKey, keyring, activeKeyId, mode, userId]);
 
   const syncedRepo =
-    mode === AppMode.Cloud && authUser ? (repository as UnifiedSyncedNoteRepository) : null;
+    mode === AppMode.Cloud && userId ? (repository as UnifiedSyncedNoteRepository) : null;
   const { syncStatus, triggerSync } = useSync(syncedRepo);
   const { hasNote, noteDates, refreshNoteDates } = useNoteDates(repository, year);
   const refreshTimerRef = useRef<number | null>(null);
@@ -101,12 +105,6 @@ export function useNoteRepository({
     hasEdits,
     isContentReady
   } = useNoteContent(date, repository, handleAfterSave);
-
-  useEffect(() => {
-    if (syncStatus === SyncStatus.Synced) {
-      refreshNoteDates({ immediate: true });
-    }
-  }, [syncStatus, refreshNoteDates]);
 
   return {
     repository,
