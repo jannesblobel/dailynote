@@ -14,9 +14,7 @@
     "preview": "vite preview",
     "test": "jest",
     "prepare": "husky install",
-    "deploy": "yarn build && wrangler deploy",
-    "cf:dev": "wrangler pages dev dist",
-    "cf:deploy": "wrangler deploy"
+    "deploy": "yarn build && wrangler pages deploy"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
