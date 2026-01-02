@@ -657,8 +657,8 @@
   top: 50%;
   transform: translateY(-50%);
   z-index: 101;
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
+  background-color: var(--color-nav-arrow-bg);
+  color: var(--color-nav-arrow-text);
   border: none;
   border-radius: 50%;
   width: 48px;
@@ -681,7 +681,7 @@
 }
 
 .navigation-arrow:hover:not(:disabled) {
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: var(--color-nav-arrow-bg-hover);
 }
 
 .navigation-arrow:disabled {
