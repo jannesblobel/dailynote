@@ -50,7 +50,7 @@ export function isContentEmpty(html: string): boolean {
 
   // Create a temporary div to extract text content
   const temp = document.createElement('div');
-  temp.innerHTML = sanitizeHtml(html);
+  temp.innerHTML = html;
   const hasText = (temp.textContent ?? '').trim().length > 0;
   const hasImages = temp.querySelector('img') !== null;
 

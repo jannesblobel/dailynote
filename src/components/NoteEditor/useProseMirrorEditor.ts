@@ -11,7 +11,6 @@ import { inputRules, InputRule, textblockTypeInputRule } from 'prosemirror-input
 import { history } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap, toggleMark } from 'prosemirror-commands';
-import { sanitizeHtml } from '../../utils/sanitize';
 
 interface ProseMirrorOptions {
   content: string;
@@ -317,9 +316,8 @@ export function useProseMirrorEditor({
         view.updateState(nextState);
         if (tr.docChanged) {
           const html = serializeDocToHtml(nextState);
-          const sanitized = sanitizeHtml(html);
-          lastContentRef.current = sanitized;
-          onChangeRef.current(sanitized);
+          lastContentRef.current = html;
+          onChangeRef.current(html);
           onUserInputRef.current?.();
         }
       },
