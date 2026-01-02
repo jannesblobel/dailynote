@@ -434,54 +434,7 @@
   }
 }
 
-/* Image drop zones and inline images */
-.note-editor__body--has-background {
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-.note-editor__content--with-background {
-  background-color: rgba(255, 255, 255, 0.85);
-  border-radius: var(--radius);
-  padding: var(--spacing-md);
-}
-
-[data-theme="dark"] .note-editor__content--with-background {
-  background-color: rgba(17, 18, 22, 0.85);
-}
-
-.drop-zone {
-  position: relative;
-}
-
-.drop-zone--active {
-  outline: 2px dashed var(--color-primary);
-  outline-offset: -4px;
-  transition: outline 0.2s ease;
-}
-
-.drop-zone__overlay {
-  position: absolute;
-  inset: 0;
-  background-color: rgba(88, 101, 242, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 10;
-  border-radius: var(--radius);
-}
-
-.drop-zone__message {
-  padding: var(--spacing-md) var(--spacing-lg);
-  background-color: var(--color-primary);
-  color: white;
-  border-radius: var(--radius);
-  font-weight: var(--font-weight-medium);
-  box-shadow: var(--shadow-md);
-}
-
+/* Inline images */
 .note-editor__content img {
   max-width: 100%;
   height: auto;
@@ -493,27 +446,6 @@
 .note-editor__content img[data-image-id="uploading"] {
   opacity: 0.5;
   filter: blur(2px);
-}
-
-.background-drop-zone {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.background-drop-zone--active .background-drop-zone__overlay {
-  display: flex;
-}
-
-.background-drop-zone__overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(88, 101, 242, 0.15);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 1000;
 }
 
 /* Vault unlock */

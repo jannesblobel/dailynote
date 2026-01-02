@@ -4,7 +4,6 @@ import { NoteEditor } from './NoteEditor';
 import { NavigationArrow } from './NavigationArrow';
 import { AuthForm } from './AuthForm';
 import { VaultUnlock } from './VaultUnlock';
-import { BackgroundDropZone } from './NoteEditor/BackgroundDropZone';
 import { isContentEmpty } from '../utils/sanitize';
 import { AppMode } from '../hooks/useAppMode';
 import { useModalTransition } from '../hooks/useModalTransition';
@@ -157,13 +156,6 @@ export function AppModals() {
 
   const shouldRenderNoteEditor = isNoteModalOpen && (showModalContent || isClosing);
 
-  // Placeholder handler for background image upload
-  // TODO: Implement actual image upload when integrating with image repository
-  const handleBackgroundImageDrop = useCallback((file: File) => {
-    console.log('Background image dropped:', file.name);
-    // Will be implemented in integration phase
-  }, []);
-
   return (
     <>
       <Modal isOpen={showIntro} onClose={dismissIntro} variant="overlay">
@@ -288,37 +280,32 @@ export function AppModals() {
       </Modal>
 
       <Modal isOpen={isNoteModalOpen} onClose={handleCloseModal}>
-        <BackgroundDropZone
-          onDrop={handleBackgroundImageDrop}
-          disabled={!date || isDecrypting}
-        >
-          {date && shouldRenderNoteEditor && (
-            <>
-              <NavigationArrow
-                direction="left"
-                onClick={navigateToPrevious}
-                disabled={!canNavigatePrev}
-                ariaLabel="Previous note"
+        {date && shouldRenderNoteEditor && (
+          <>
+            <NavigationArrow
+              direction="left"
+              onClick={navigateToPrevious}
+              disabled={!canNavigatePrev}
+              ariaLabel="Previous note"
+            />
+            <NavigationArrow
+              direction="right"
+              onClick={navigateToNext}
+              disabled={!canNavigateNext}
+              ariaLabel="Next note"
+            />
+            <div ref={modalContentRef}>
+              <NoteEditor
+                date={date}
+                content={isDecrypting ? '' : content}
+                onChange={setContent}
+                isClosing={isClosing}
+                hasEdits={hasEdits}
+                isDecrypting={isDecrypting}
               />
-              <NavigationArrow
-                direction="right"
-                onClick={navigateToNext}
-                disabled={!canNavigateNext}
-                ariaLabel="Next note"
-              />
-              <div ref={modalContentRef}>
-                <NoteEditor
-                  date={date}
-                  content={isDecrypting ? '' : content}
-                  onChange={setContent}
-                  isClosing={isClosing}
-                  hasEdits={hasEdits}
-                  isDecrypting={isDecrypting}
-                />
-              </div>
-            </>
-          )}
-        </BackgroundDropZone>
+            </div>
+          </>
+        )}
       </Modal>
     </>
   );

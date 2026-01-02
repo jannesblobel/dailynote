@@ -10,7 +10,6 @@ interface NoteEditorViewProps {
   onPaste: (e: ClipboardEvent<HTMLDivElement>) => void;
   onDrop?: (e: DragEvent<HTMLDivElement>) => void;
   onDragOver?: (e: DragEvent<HTMLDivElement>) => void;
-  backgroundImageUrl?: string | null;
 }
 
 export function NoteEditorView({
@@ -22,17 +21,8 @@ export function NoteEditorView({
   onInput,
   onPaste,
   onDrop,
-  onDragOver,
-  backgroundImageUrl
+  onDragOver
 }: NoteEditorViewProps) {
-  const hasBackground = !!backgroundImageUrl;
-  const bodyClassName = `note-editor__body ${hasBackground ? 'note-editor__body--has-background' : ''}`.trim();
-  const contentClassName = `note-editor__content ${hasBackground ? 'note-editor__content--with-background' : ''}`.trim();
-
-  const bodyStyle = hasBackground && backgroundImageUrl
-    ? { backgroundImage: `url(${backgroundImageUrl})` }
-    : undefined;
-
   return (
     <div className="note-editor">
       <div className="note-editor__header">
@@ -46,10 +36,10 @@ export function NoteEditorView({
           <span className="note-editor__saving">{statusText}</span>
         )}
       </div>
-      <div className={bodyClassName} style={bodyStyle}>
+      <div className="note-editor__body">
         <div
           ref={editorRef}
-          className={contentClassName}
+          className="note-editor__content"
           contentEditable={isEditable}
           onInput={onInput}
           onPaste={onPaste}

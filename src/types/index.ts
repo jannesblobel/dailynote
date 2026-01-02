@@ -2,7 +2,6 @@ export interface Note {
   date: string; // "DD-MM-YYYY"
   content: string;
   updatedAt: string; // ISO timestamp
-  backgroundImageId?: string; // Reference to background image
 }
 
 export interface SyncedNote extends Note {

@@ -6,8 +6,11 @@ import { useSync } from './useSync';
 import { supabase } from '../lib/supabase';
 import { createLocalSyncedNoteRepository, createSyncedNoteRepository } from '../storage/syncedNoteRepository';
 import { createEncryptedNoteRepository } from '../storage/noteStorage';
+import { createEncryptedImageRepository } from '../storage/localImageStorage';
+import { createCloudImageRepository } from '../storage/cloudImageStorage';
 import type { SyncedNoteRepository } from '../storage/syncedNoteRepository';
 import type { NoteRepository } from '../storage/noteRepository';
+import type { ImageRepository } from '../storage/imageRepository';
 import { AppMode } from './useAppMode';
 import { SyncStatus } from '../types';
 
@@ -22,6 +25,7 @@ interface UseNoteRepositoryProps {
 
 export interface UseNoteRepositoryReturn {
   repository: NoteRepository | SyncedNoteRepository | null;
+  imageRepository: ImageRepository | null;
   syncedRepo: SyncedNoteRepository | null;
   syncStatus: ReturnType<typeof useSync>['syncStatus'];
   triggerSync: ReturnType<typeof useSync>['triggerSync'];
@@ -55,6 +59,23 @@ export function useNoteRepository({
     if (!vaultKey) return null;
 
     return createEncryptedNoteRepository(vaultKey);
+  }, [mode, authUser, vaultKey, cloudCacheKey]);
+
+  const imageRepository = useMemo<ImageRepository | null>(() => {
+    if (mode === AppMode.Cloud && authUser) {
+      return createCloudImageRepository(supabase, authUser.id);
+    }
+
+    // For local mode (both encrypted and local synced)
+    if (vaultKey) {
+      return createEncryptedImageRepository(vaultKey);
+    }
+
+    if (cloudCacheKey) {
+      return createEncryptedImageRepository(cloudCacheKey);
+    }
+
+    return null;
   }, [mode, authUser, vaultKey, cloudCacheKey]);
 
   const syncedRepo = mode === AppMode.Cloud ? repository as SyncedNoteRepository : null;
@@ -95,6 +116,7 @@ export function useNoteRepository({
 
   return {
     repository,
+    imageRepository,
     syncedRepo,
     syncStatus,
     triggerSync,
