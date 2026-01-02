@@ -2,6 +2,8 @@
 
 A minimalist daily notes application built with React and TypeScript. Write one note per day and view your entire year at a glance.
 
+<img width="1512" height="949" alt="Image" src="https://github.com/user-attachments/assets/bc4f5d2c-dacb-46f0-bf58-eaa6fe98dc99" />
+
 ## Features
 
 - **One Note Per Day**: Keep it simple with a single note for each day
