@@ -495,6 +495,27 @@
   filter: blur(2px);
 }
 
+.background-drop-zone {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.background-drop-zone--active .background-drop-zone__overlay {
+  display: flex;
+}
+
+.background-drop-zone__overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(88, 101, 242, 0.15);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1000;
+}
+
 /* Vault unlock */
 .vault-unlock {
   flex: 1;
