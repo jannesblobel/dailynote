@@ -1,11 +1,15 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Modal } from './Modal';
 import { NoteEditor } from './NoteEditor';
+import { NavigationArrow } from './NavigationArrow';
 import { AuthForm } from './AuthForm';
 import { VaultUnlock } from './VaultUnlock';
 import { isContentEmpty } from '../utils/sanitize';
 import { AppMode } from '../hooks/useAppMode';
 import { useModalTransition } from '../hooks/useModalTransition';
+import { useNoteNavigation } from '../hooks/useNoteNavigation';
+import { useNoteKeyboardNav } from '../hooks/useNoteKeyboardNav';
+import { useSwipeGesture } from '../hooks/useSwipeGesture';
 import { AuthState, ViewType } from '../types';
 import { useActiveVaultContext } from '../contexts/activeVaultContext';
 import { useAppModeContext } from '../contexts/appModeContext';
@@ -49,6 +53,7 @@ export function AppModals() {
     date,
     year,
     navigateToCalendar,
+    navigateToDate,
     showIntro,
     dismissIntro,
     startWriting
@@ -77,6 +82,37 @@ export function AppModals() {
     openDelayMs: 100,
     resetDelayMs: 0,
     closeDelayMs: hasEdits ? 200 : 0
+  });
+
+  // Note navigation
+  const {
+    canNavigatePrev,
+    canNavigateNext,
+    navigateToPrevious,
+    navigateToNext
+  } = useNoteNavigation({
+    currentDate: date,
+    noteDates,
+    onNavigate: navigateToDate
+  });
+
+  // Keyboard navigation (arrow keys when not editing)
+  useNoteKeyboardNav({
+    enabled: isNoteModalOpen && !isDecrypting,
+    onPrevious: navigateToPrevious,
+    onNext: navigateToNext,
+    contentEditableSelector: '.note-editor__content'
+  });
+
+  // Swipe gesture navigation (mobile)
+  const modalContentRef = useRef<HTMLDivElement>(null);
+
+  useSwipeGesture({
+    enabled: isNoteModalOpen && !isDecrypting,
+    onSwipeLeft: navigateToNext,
+    onSwipeRight: navigateToPrevious,
+    elementRef: modalContentRef,
+    threshold: 50
   });
 
   useEffect(() => {
@@ -245,14 +281,30 @@ export function AppModals() {
 
       <Modal isOpen={isNoteModalOpen} onClose={handleCloseModal}>
         {date && shouldRenderNoteEditor && (
-          <NoteEditor
-            date={date}
-            content={isDecrypting ? '' : content}
-            onChange={setContent}
-            isClosing={isClosing}
-            hasEdits={hasEdits}
-            isDecrypting={isDecrypting}
-          />
+          <>
+            <NavigationArrow
+              direction="left"
+              onClick={navigateToPrevious}
+              disabled={!canNavigatePrev}
+              ariaLabel="Previous note"
+            />
+            <NavigationArrow
+              direction="right"
+              onClick={navigateToNext}
+              disabled={!canNavigateNext}
+              ariaLabel="Next note"
+            />
+            <div ref={modalContentRef}>
+              <NoteEditor
+                date={date}
+                content={isDecrypting ? '' : content}
+                onChange={setContent}
+                isClosing={isClosing}
+                hasEdits={hasEdits}
+                isDecrypting={isDecrypting}
+              />
+            </div>
+          </>
         )}
       </Modal>
     </>
