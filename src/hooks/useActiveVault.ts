@@ -117,7 +117,11 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
     const cacheCloudKeys = async () => {
       for (const [keyId, key] of cloudVault.keyring.entries()) {
         if (keyId === localKeyId) continue;
-        await storeLocalWrappedKey(keyId, key, localKey);
+        try {
+          await storeLocalWrappedKey(keyId, key, localKey);
+        } catch (error) {
+          console.warn('Failed to cache cloud key locally:', error);
+        }
       }
     };
 
