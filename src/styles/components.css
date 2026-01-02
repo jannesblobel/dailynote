@@ -300,6 +300,19 @@
   height: 100%;
 }
 
+.note-editor__drag-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 20, 24, 0.16);
+  border: 2px dashed rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 1;
+}
+
 .note-editor__header {
   display: flex;
   align-items: center;
@@ -357,6 +370,7 @@
   flex-direction: column;
   padding: 0 0 var(--spacing-2xl);
   overflow: hidden;
+  position: relative;
 }
 
 /* ContentEditable styles */
@@ -373,6 +387,7 @@
   word-wrap: break-word;
   outline: none;
 }
+
 
 /* Placeholder for contentEditable */
 .note-editor__content:empty:before {

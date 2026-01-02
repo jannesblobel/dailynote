@@ -27,6 +27,9 @@ export async function resolveImageUrls(
       if (!imageId) {
         return;
       }
+      if (imageId === 'uploading') {
+        return;
+      }
 
       try {
         const url = await repository.getUrl(imageId);

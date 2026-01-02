@@ -36,6 +36,7 @@ export interface UseNoteRepositoryReturn {
   noteDates: Set<string>;
   refreshNoteDates: (options?: { immediate?: boolean }) => void;
   isDecrypting: boolean;
+  isContentReady: boolean;
 }
 
 export function useNoteRepository({
@@ -105,7 +106,8 @@ export function useNoteRepository({
     content,
     setContent,
     isDecrypting,
-    hasEdits
+    hasEdits,
+    isContentReady
   } = useNoteContent(date, repository, handleAfterSave);
 
   useEffect(() => {
@@ -126,6 +128,7 @@ export function useNoteRepository({
     hasNote,
     noteDates,
     refreshNoteDates,
-    isDecrypting
+    isDecrypting,
+    isContentReady
   };
 }

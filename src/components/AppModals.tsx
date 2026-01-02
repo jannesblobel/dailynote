@@ -44,6 +44,7 @@ export function AppModals() {
     content,
     setContent,
     isDecrypting,
+    isContentReady,
     hasEdits,
     noteDates,
     triggerSync
@@ -297,11 +298,12 @@ export function AppModals() {
             <div ref={modalContentRef}>
               <NoteEditor
                 date={date}
-                content={isDecrypting ? '' : content}
+                content={isContentReady ? content : ''}
                 onChange={setContent}
                 isClosing={isClosing}
                 hasEdits={hasEdits}
                 isDecrypting={isDecrypting}
+                isContentReady={isContentReady}
               />
             </div>
           </>

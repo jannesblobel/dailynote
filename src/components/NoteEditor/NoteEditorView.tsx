@@ -5,11 +5,15 @@ interface NoteEditorViewProps {
   isEditable: boolean;
   showReadonlyBadge: boolean;
   statusText: string | null;
+  placeholderText: string;
   editorRef: RefObject<HTMLDivElement | null>;
   onInput: (e: FormEvent<HTMLDivElement>) => void;
   onPaste: (e: ClipboardEvent<HTMLDivElement>) => void;
   onDrop?: (e: DragEvent<HTMLDivElement>) => void;
   onDragOver?: (e: DragEvent<HTMLDivElement>) => void;
+  onDragEnter?: (e: DragEvent<HTMLDivElement>) => void;
+  onDragLeave?: (e: DragEvent<HTMLDivElement>) => void;
+  isDraggingImage?: boolean;
 }
 
 export function NoteEditorView({
@@ -17,14 +21,22 @@ export function NoteEditorView({
   isEditable,
   showReadonlyBadge,
   statusText,
+  placeholderText,
   editorRef,
   onInput,
   onPaste,
   onDrop,
-  onDragOver
+  onDragOver,
+  onDragEnter,
+  onDragLeave,
+  isDraggingImage = false
 }: NoteEditorViewProps) {
   return (
     <div className="note-editor">
+      {isDraggingImage && (
+        <div className="note-editor__drag-overlay" aria-hidden="true">
+        </div>
+      )}
       <div className="note-editor__header">
         <div className="note-editor__header-title">
           <span className="note-editor__date">{formattedDate}</span>
@@ -45,7 +57,9 @@ export function NoteEditorView({
           onPaste={onPaste}
           onDrop={onDrop}
           onDragOver={onDragOver}
-          data-placeholder={isEditable ? 'Write your note for today...' : 'No note for this day'}
+          onDragEnter={onDragEnter}
+          onDragLeave={onDragLeave}
+          data-placeholder={placeholderText}
           suppressContentEditableWarning
         />
       </div>

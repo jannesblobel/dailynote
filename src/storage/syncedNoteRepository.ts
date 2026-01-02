@@ -10,7 +10,8 @@ import {
   decryptNote,
   deleteRemoteNote,
   resolveConflict,
-  RevisionConflictError
+  RevisionConflictError,
+  type EncryptedRemoteNote
 } from './syncService';
 
 const NOTE_IV_BYTES = 12;
@@ -314,14 +315,17 @@ export function createSyncedNoteRepository(
       }
 
       // Treat missing remote dates as deletions when the note isn't dirty locally.
-      for (const [date, local] of updatedLocalNotes) {
-        if (local.dirty || local.deleted) continue;
-        if (!remoteDateSet.has(date)) {
-          await setLocalNote(date, {
-            ...local,
-            deleted: true,
-            dirty: false
-          });
+      // Guard against empty remote index to avoid accidental wipes during auth/load glitches.
+      if (remoteDates.length > 0) {
+        for (const [date, local] of updatedLocalNotes) {
+          if (local.dirty || local.deleted) continue;
+          if (!remoteDateSet.has(date)) {
+            await setLocalNote(date, {
+              ...local,
+              deleted: true,
+              dirty: false
+            });
+          }
         }
       }
 
@@ -349,7 +353,20 @@ export function createSyncedNoteRepository(
         return null;
       }
 
-      const remote = await fetchRemoteNoteByDate(supabase, userId, date);
+      let remote: EncryptedRemoteNote | null = null;
+      try {
+        remote = await fetchRemoteNoteByDate(supabase, userId, date);
+      } catch (error) {
+        if (local) {
+          const note = await decryptFromLocal(vaultKey, local);
+          return {
+            date: note.date,
+            content: note.content,
+            updatedAt: note.updatedAt
+          };
+        }
+        throw error;
+      }
       if (!remote || remote.deleted) {
         if (local) {
           if (remote?.deleted && !local.deleted) {

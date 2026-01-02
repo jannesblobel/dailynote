@@ -1,12 +1,10 @@
-import { useCallback, useEffect } from 'react';
 import { formatDateDisplay } from '../../utils/date';
 import { canEditNote } from '../../utils/noteRules';
 import { NoteEditorView } from './NoteEditorView';
 import { useContentEditable } from './useContentEditable';
 import { useSavingIndicator } from './useSavingIndicator';
-import { useNoteRepositoryContext } from '../../contexts/noteRepositoryContext';
-import { resolveImageUrls } from '../../utils/imageResolver';
-import { compressImage } from '../../utils/imageCompression';
+import { useInlineImageUpload, useInlineImageUrls } from './useInlineImages';
+import { useImageDragState } from './useImageDragState';
 
 interface NoteEditorProps {
   date: string;
@@ -15,6 +13,7 @@ interface NoteEditorProps {
   isClosing: boolean;
   hasEdits: boolean;
   isDecrypting?: boolean;
+  isContentReady: boolean;
 }
 
 export function NoteEditor({
@@ -23,56 +22,55 @@ export function NoteEditor({
   onChange,
   isClosing,
   hasEdits,
-  isDecrypting = false
+  isDecrypting = false,
+  isContentReady
 }: NoteEditorProps) {
   const canEdit = canEditNote(date);
-  const isEditable = canEdit && !isDecrypting;
+  const isEditable = canEdit && !isDecrypting && isContentReady;
   const formattedDate = formatDateDisplay(date);
   const { showSaving, scheduleSavingIndicator } = useSavingIndicator(isEditable);
   const displayContent = content;
-
-  const { imageRepository } = useNoteRepositoryContext();
-
-  // Handle inline image upload
-  const uploadInlineImage = useCallback(async (file: File): Promise<string> => {
-    if (!imageRepository) {
-      throw new Error('Image repository not available');
-    }
-
-    // Compress image
-    const compressed = await compressImage(file);
-
-    // Upload to repository
-    const meta = await imageRepository.upload(
-      date,
-      compressed.blob,
-      'inline',
-      file.name
-    );
-
-    return meta.id;
-  }, [imageRepository, date]);
 
   const statusText = isDecrypting
     ? 'Decrypting...'
     : isEditable && (showSaving || (isClosing && hasEdits))
       ? 'Saving...'
       : null;
+  const placeholderText = !isContentReady || isDecrypting
+    ? 'Loading...'
+    : isEditable
+      ? 'Write your note for today...'
+      : 'No note for this day';
 
-  const { editorRef, handleInput, handlePaste, handleDrop, handleDragOver } = useContentEditable({
+  const { isDraggingImage, endImageDrag } = useImageDragState();
+
+  const { onImageDrop } = useInlineImageUpload({
+    date,
+    isEditable
+  });
+
+  const {
+    editorRef,
+    handleInput,
+    handlePaste,
+    handleDrop,
+    handleDragOver,
+    handleDragEnter,
+    handleDragLeave
+  } = useContentEditable({
     content: displayContent,
     isEditable,
     onChange,
     onUserInput: scheduleSavingIndicator,
-    onImageDrop: isEditable ? uploadInlineImage : undefined
+    onImageDrop,
+    isDraggingImage,
+    onDropComplete: endImageDrag
   });
 
-  // Resolve image URLs when content changes
-  useEffect(() => {
-    if (editorRef.current && imageRepository) {
-      resolveImageUrls(editorRef.current, imageRepository);
-    }
-  }, [content, imageRepository, editorRef]);
+  useInlineImageUrls({
+    content: displayContent,
+    editorRef
+  });
 
   return (
     <NoteEditorView
@@ -80,11 +78,15 @@ export function NoteEditor({
       isEditable={isEditable}
       showReadonlyBadge={!canEdit}
       statusText={statusText}
+      placeholderText={placeholderText}
       editorRef={editorRef}
       onInput={handleInput}
       onPaste={handlePaste}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      isDraggingImage={isDraggingImage}
     />
   );
 }
