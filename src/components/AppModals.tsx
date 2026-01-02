@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Modal } from './Modal';
-import { NoteEditor } from './NoteEditor';
-import { NavigationArrow } from './NavigationArrow';
-import { AuthForm } from './AuthForm';
-import { VaultUnlock } from './VaultUnlock';
+import { IntroModal } from './AppModals/IntroModal';
+import { ModeChoiceModal } from './AppModals/ModeChoiceModal';
+import { LocalVaultModal } from './AppModals/LocalVaultModal';
+import { CloudAuthModal } from './AppModals/CloudAuthModal';
+import { VaultErrorModal } from './AppModals/VaultErrorModal';
+import { NoteModal } from './AppModals/NoteModal';
 import { isContentEmpty } from '../utils/sanitize';
 import { AppMode } from '../hooks/useAppMode';
 import { useModalTransition } from '../hooks/useModalTransition';
@@ -159,156 +160,65 @@ export function AppModals() {
 
   return (
     <>
-      <Modal isOpen={showIntro} onClose={dismissIntro} variant="overlay">
-        <div className="vault-unlock">
-          <div className="vault-unlock__card">
-            <h2 className="vault-unlock__title">Welcome to DailyNote</h2>
-            <p className="vault-unlock__helper">
-              A calm place for one note per day. No account required to start.
-            </p>
-            <ul className="intro-list">
-              <li>Your notes are encrypted on this device before storage.</li>
-              <li>Sync is optional and keeps encrypted backups in the cloud.</li>
-            </ul>
-            <div className="vault-unlock__choices">
-              <button
-                className="button button--primary vault-unlock__button"
-                onClick={startWriting}
-              >
-                Start writing
-              </button>
-              <button
-                className="button button--ghost vault-unlock__button"
-                onClick={() => {
-                  dismissIntro();
-                  switchToCloud();
-                }}
-              >
-                Set up sync
-              </button>
-            </div>
-          </div>
-        </div>
-      </Modal>
+      <IntroModal
+        isOpen={showIntro}
+        onDismiss={dismissIntro}
+        onStartWriting={startWriting}
+        onSetupSync={switchToCloud}
+      />
 
-      <Modal isOpen={showModeChoice} onClose={() => {}} variant="overlay">
-        <div className="vault-unlock">
-          <div className="vault-unlock__card">
-            <h2 className="vault-unlock__title">Sync your notes?</h2>
-            <p className="vault-unlock__helper">
-              Create an account to back up and sync across devices.
-            </p>
-            <div className="vault-unlock__choices">
-              <button
-                className="button button--primary vault-unlock__button"
-                onClick={switchToCloud}
-              >
-                Sign in to sync
-              </button>
-              <button
-                className="button button--ghost vault-unlock__button"
-                onClick={closeModeChoice}
-              >
-                Not now
-              </button>
-            </div>
-          </div>
-        </div>
-      </Modal>
+      <ModeChoiceModal
+        isOpen={showModeChoice}
+        onConfirm={switchToCloud}
+        onDismiss={closeModeChoice}
+      />
 
-      <Modal isOpen={showLocalVaultModal} onClose={() => {}} variant="overlay">
-        <VaultUnlock
-          mode={localVault.hasVault ? 'unlock' : 'setup'}
-          isBusy={localVault.isBusy}
-          error={localVault.error}
-          onUnlock={handleLocalUnlock}
-          onSwitchToCloud={switchToCloud}
-        />
-      </Modal>
+      <LocalVaultModal
+        isOpen={showLocalVaultModal}
+        hasVault={localVault.hasVault}
+        isBusy={localVault.isBusy}
+        error={localVault.error}
+        onUnlock={handleLocalUnlock}
+        onSwitchToCloud={switchToCloud}
+      />
 
-      <Modal isOpen={showCloudAuthModal} onClose={() => {}} variant="overlay">
-        {isSigningIn ? (
-          <div className="vault-unlock">
-            <div className="vault-unlock__card">
-              <div className="note-loading">Signing in...</div>
-            </div>
-          </div>
-        ) : auth.authState === AuthState.AwaitingConfirmation ? (
-          <div className="vault-unlock">
-            <div className="vault-unlock__card">
-              <h2 className="vault-unlock__title">Check your email</h2>
-              <p className="vault-unlock__helper">
-                We sent a confirmation link to <strong>{auth.confirmationEmail}</strong>.
-                Click the link to activate your account.
-              </p>
-              <button
-                className="button button--primary vault-unlock__button"
-                onClick={auth.backToSignIn}
-              >
-                Back to sign in
-              </button>
-            </div>
-          </div>
-        ) : (
-          <AuthForm
-            isBusy={auth.isBusy}
-            error={auth.error}
-            onSignIn={handleSignIn}
-            onSignUp={handleSignUp}
-            defaultPassword={localPassword}
-          />
-        )}
-      </Modal>
+      <CloudAuthModal
+        isOpen={showCloudAuthModal}
+        isSigningIn={isSigningIn}
+        authState={auth.authState}
+        confirmationEmail={auth.confirmationEmail}
+        isBusy={auth.isBusy}
+        error={auth.error}
+        localPassword={localPassword}
+        onBackToSignIn={auth.backToSignIn}
+        onSignIn={handleSignIn}
+        onSignUp={handleSignUp}
+      />
 
-      <Modal isOpen={!!vaultError && isVaultReady && !showIntro} onClose={() => {}} variant="overlay">
-        <div className="vault-unlock">
-          <div className="vault-unlock__card">
-            <h2 className="vault-unlock__title">Unlock Error</h2>
-            <p className="vault-unlock__error">{vaultError}</p>
-            <p className="vault-unlock__helper">
-              Please try again.
-            </p>
-            {mode === AppMode.Cloud && (
-              <button
-                className="button button--primary vault-unlock__button"
-                onClick={handleSignOut}
-              >
-                Sign out
-              </button>
-            )}
-          </div>
-        </div>
-      </Modal>
+      <VaultErrorModal
+        isOpen={!!vaultError && isVaultReady && !showIntro}
+        error={vaultError}
+        mode={mode}
+        onSignOut={handleSignOut}
+      />
 
-      <Modal isOpen={isNoteModalOpen} onClose={handleCloseModal}>
-        {date && shouldRenderNoteEditor && (
-          <>
-            <NavigationArrow
-              direction="left"
-              onClick={navigateToPrevious}
-              disabled={!canNavigatePrev}
-              ariaLabel="Previous note"
-            />
-            <NavigationArrow
-              direction="right"
-              onClick={navigateToNext}
-              disabled={!canNavigateNext}
-              ariaLabel="Next note"
-            />
-            <div ref={modalContentRef} className="note-editor-wrapper">
-              <NoteEditor
-                date={date}
-                content={isContentReady ? content : ''}
-                onChange={setContent}
-                isClosing={isClosing}
-                hasEdits={hasEdits}
-                isDecrypting={isDecrypting}
-                isContentReady={isContentReady}
-              />
-            </div>
-          </>
-        )}
-      </Modal>
+      <NoteModal
+        isOpen={isNoteModalOpen}
+        onClose={handleCloseModal}
+        date={date}
+        shouldRenderNoteEditor={shouldRenderNoteEditor}
+        isClosing={isClosing}
+        hasEdits={hasEdits}
+        isDecrypting={isDecrypting}
+        isContentReady={isContentReady}
+        content={content}
+        onChange={setContent}
+        canNavigatePrev={canNavigatePrev}
+        canNavigateNext={canNavigateNext}
+        navigateToPrevious={navigateToPrevious}
+        navigateToNext={navigateToNext}
+        modalContentRef={modalContentRef}
+      />
     </>
   );
 }
