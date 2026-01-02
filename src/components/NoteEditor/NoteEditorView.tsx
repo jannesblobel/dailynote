@@ -22,7 +22,7 @@ export function NoteEditorView({
   return (
     <div className="note-editor">
       <div className="note-editor__header">
-        <div>
+        <div className="note-editor__header-title">
           <span className="note-editor__date">{formattedDate}</span>
           {showReadonlyBadge && (
             <span className="note-editor__readonly-badge">Read only</span>

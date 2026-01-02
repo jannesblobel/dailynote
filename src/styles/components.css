@@ -307,6 +307,13 @@
   padding: var(--spacing-xl) var(--spacing-2xl);
 }
 
+.note-editor__header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
 .note-editor__date {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
@@ -318,7 +325,22 @@
   background-color: var(--color-surface);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius-sm);
-  margin-left: var(--spacing-sm);
+}
+
+/* Desktop: keep badge inline and vertically centered */
+@media (min-width: 769px) {
+  .note-editor__header-title {
+    flex-wrap: nowrap;
+  }
+}
+
+/* Mobile: stack badge below date */
+@media (max-width: 768px) {
+  .note-editor__header-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-xs);
+  }
 }
 
 .note-editor__saving {
