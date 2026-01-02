@@ -1,8 +1,8 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { useNoteRepositoryContext } from '../../contexts/noteRepositoryContext';
-import { resolveImageUrls } from '../../utils/imageResolver';
 import { compressImage } from '../../utils/imageCompression';
+import { revokeImageUrls } from '../../utils/imageResolver';
 
 interface UseInlineImageUploadOptions {
   date: string;
@@ -10,6 +10,7 @@ interface UseInlineImageUploadOptions {
 }
 
 interface UseInlineImageUrlsOptions {
+  date: string;
   content: string;
   editorRef: RefObject<HTMLDivElement | null>;
 }
@@ -20,7 +21,12 @@ export function useInlineImageUpload({
 }: UseInlineImageUploadOptions) {
   const { imageRepository } = useNoteRepositoryContext();
 
-  const uploadInlineImage = useCallback(async (file: File): Promise<string> => {
+  const uploadInlineImage = useCallback(async (file: File): Promise<{
+    id: string;
+    width: number;
+    height: number;
+    filename: string;
+  }> => {
     if (!imageRepository) {
       throw new Error('Image repository not available');
     }
@@ -31,10 +37,16 @@ export function useInlineImageUpload({
       date,
       compressed.blob,
       'inline',
-      file.name
+      file.name,
+      { width: compressed.width, height: compressed.height }
     );
 
-    return meta.id;
+    return {
+      id: meta.id,
+      width: compressed.width,
+      height: compressed.height,
+      filename: file.name
+    };
   }, [imageRepository, date]);
 
   return {
@@ -43,14 +55,114 @@ export function useInlineImageUpload({
 }
 
 export function useInlineImageUrls({
+  date,
   content,
   editorRef
 }: UseInlineImageUrlsOptions) {
   const { imageRepository } = useNoteRepositoryContext();
+  const resolvedIdsRef = useRef<Set<string>>(new Set());
+  const inFlightIdsRef = useRef<Set<string>>(new Set());
+  const urlCacheRef = useRef<Map<string, string>>(new Map());
+  const metaCacheRef = useRef<Map<string, { width: number; height: number }>>(new Map());
+  const dateRef = useRef<string | null>(null);
+  const repoRef = useRef<typeof imageRepository>(null);
+  const [metaVersion, setMetaVersion] = useState(0);
 
   useEffect(() => {
-    if (editorRef.current && imageRepository) {
-      resolveImageUrls(editorRef.current, imageRepository);
+    if (!imageRepository) return;
+    if (dateRef.current === date && repoRef.current === imageRepository) return;
+
+    dateRef.current = date;
+    repoRef.current = imageRepository;
+    resolvedIdsRef.current = new Set();
+    inFlightIdsRef.current = new Set();
+    urlCacheRef.current = new Map();
+    metaCacheRef.current = new Map();
+
+    const loadMeta = async () => {
+      try {
+        const metas = await imageRepository.getByNoteDate(date);
+        const map = new Map<string, { width: number; height: number }>();
+        metas.forEach((meta) => {
+          if (meta.width > 0 && meta.height > 0) {
+            map.set(meta.id, { width: meta.width, height: meta.height });
+          }
+        });
+        metaCacheRef.current = map;
+      } catch {
+        metaCacheRef.current = new Map();
+      } finally {
+        setMetaVersion((value) => value + 1);
+      }
+    };
+
+    void loadMeta();
+  }, [date, imageRepository]);
+
+  useEffect(() => {
+    const contentEl = editorRef.current;
+    return () => {
+      if (contentEl) {
+        revokeImageUrls(contentEl);
+      }
+    };
+  }, [date, editorRef, imageRepository]);
+
+  useEffect(() => {
+    if (!editorRef.current || !imageRepository) {
+      return;
     }
-  }, [content, imageRepository, editorRef]);
+
+    const images = editorRef.current.querySelectorAll('img[data-image-id]');
+    if (!images.length) {
+      return;
+    }
+
+    images.forEach((img) => {
+      const imageId = img.getAttribute('data-image-id');
+      if (!imageId || imageId === 'uploading') {
+        return;
+      }
+
+      if (!img.getAttribute('width') || !img.getAttribute('height')) {
+        const meta = metaCacheRef.current.get(imageId);
+        if (meta) {
+          img.setAttribute('width', String(meta.width));
+          img.setAttribute('height', String(meta.height));
+        }
+      }
+
+      if (resolvedIdsRef.current.has(imageId)) {
+        const cachedUrl = urlCacheRef.current.get(imageId);
+        if (cachedUrl && img.getAttribute('src') !== cachedUrl) {
+          img.setAttribute('src', cachedUrl);
+        }
+        return;
+      }
+      if (inFlightIdsRef.current.has(imageId)) {
+        return;
+      }
+
+      img.setAttribute('data-image-loading', 'true');
+      inFlightIdsRef.current.add(imageId);
+
+      imageRepository.getUrl(imageId)
+        .then((url) => {
+          if (!url) {
+            return;
+          }
+          urlCacheRef.current.set(imageId, url);
+          img.setAttribute('src', url);
+          resolvedIdsRef.current.add(imageId);
+        })
+        .catch((error) => {
+          console.error(`Failed to resolve image ${imageId}:`, error);
+          img.setAttribute('alt', 'Failed to load image');
+        })
+        .finally(() => {
+          inFlightIdsRef.current.delete(imageId);
+          img.removeAttribute('data-image-loading');
+        });
+    });
+  }, [content, imageRepository, editorRef, metaVersion]);
 }

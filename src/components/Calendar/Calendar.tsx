@@ -3,6 +3,7 @@ import { MonthGrid } from './MonthGrid';
 import { Button } from '../Button';
 import { SyncIndicator } from '../SyncIndicator';
 import type { SyncStatus } from '../../types';
+import type { PendingOpsSummary } from '../../services/syncService';
 
 interface CalendarProps {
   year: number;
@@ -10,6 +11,7 @@ interface CalendarProps {
   onDayClick?: (date: string) => void;
   onYearChange: (year: number) => void;
   syncStatus?: SyncStatus;
+  pendingOps?: PendingOpsSummary;
   onSignIn?: () => void;
   onSignOut?: () => void;
 }
@@ -20,6 +22,7 @@ export function Calendar({
   onDayClick,
   onYearChange,
   syncStatus,
+  pendingOps,
   onSignIn,
   onSignOut
 }: CalendarProps) {
@@ -70,7 +73,7 @@ export function Calendar({
           →
         </Button>
         <div className="calendar__header-actions">
-          {syncStatus && <SyncIndicator status={syncStatus} />}
+          {syncStatus && <SyncIndicator status={syncStatus} pendingOps={pendingOps} />}
           {onSignIn && (
             <button className="calendar__auth" onClick={onSignIn}>
               Sign in to sync

@@ -103,7 +103,8 @@ export function createUnifiedImageRepository(
       noteDate: string,
       file: Blob,
       type: 'background' | 'inline',
-      filename: string
+      filename: string,
+      options?: { width?: number; height?: number }
     ): Promise<NoteImage> {
       const imageId = generateUuid();
       const imageKey = await getImageKey(keyring.activeKeyId);
@@ -118,8 +119,8 @@ export function createUnifiedImageRepository(
         type,
         filename,
         mimeType: file.type || 'application/octet-stream',
-        width: 0,
-        height: 0,
+        width: options?.width ?? 0,
+        height: options?.height ?? 0,
         size,
         createdAt: new Date().toISOString(),
         sha256,

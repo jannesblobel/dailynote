@@ -16,10 +16,16 @@ import { sanitizeHtml } from '../../utils/sanitize';
 interface ProseMirrorOptions {
   content: string;
   isEditable: boolean;
+  isEnabled?: boolean;
   placeholderText: string;
   onChange: (content: string) => void;
   onUserInput?: () => void;
-  onImageDrop?: (file: File) => Promise<string>;
+  onImageDrop?: (file: File) => Promise<{
+    id: string;
+    width: number;
+    height: number;
+    filename: string;
+  }>;
   isDraggingImage?: boolean;
   onDropComplete?: () => void;
 }
@@ -214,6 +220,7 @@ function isSingleUrl(text: string): boolean {
 export function useProseMirrorEditor({
   content,
   isEditable,
+  isEnabled = true,
   placeholderText,
   onChange,
   onUserInput,
@@ -259,6 +266,12 @@ export function useProseMirrorEditor({
       inputRules({ rules }),
       history(),
       keymap({
+        'Shift-Enter': (state, dispatch) => {
+          if (!dispatch) return true;
+          const hardBreak = schema.nodes.hard_break.create();
+          dispatch(state.tr.replaceSelectionWith(hardBreak).scrollIntoView());
+          return true;
+        },
         'Mod-b': toggleMark(schema.marks.strong),
         'Mod-i': toggleMark(schema.marks.em),
         'Mod-`': toggleMark(schema.marks.code)
@@ -284,6 +297,14 @@ export function useProseMirrorEditor({
   }, [onChange, onUserInput, onImageDrop, onDropComplete]);
 
   useEffect(() => {
+    if (!isEnabled) {
+      if (viewRef.current) {
+        viewRef.current.destroy();
+        viewRef.current = null;
+      }
+      return;
+    }
+
     if (!editorRef.current || viewRef.current) return;
 
     const doc = parseHtmlToDoc(initialContentRef.current);
@@ -321,12 +342,14 @@ export function useProseMirrorEditor({
             onUserInputRef.current?.();
 
             dropHandler(file)
-              .then((imageId) => {
+              .then(({ id, width, height, filename }) => {
                 const pos = findImagePos(view.state, 'uploading');
                 if (pos !== null) {
                   const updated = view.state.tr.setNodeMarkup(pos, undefined, {
-                    'data-image-id': imageId,
-                    alt: file.name
+                    'data-image-id': id,
+                    alt: filename,
+                    width,
+                    height
                   });
                   view.dispatch(updated);
                 }
@@ -385,12 +408,14 @@ export function useProseMirrorEditor({
         onUserInputRef.current?.();
 
         dropHandler(file)
-          .then((imageId) => {
+          .then(({ id, width, height, filename }) => {
             const imagePos = findImagePos(view.state, 'uploading');
             if (imagePos !== null) {
               const updated = view.state.tr.setNodeMarkup(imagePos, undefined, {
-                'data-image-id': imageId,
-                alt: file.name
+                'data-image-id': id,
+                alt: filename,
+                width,
+                height
               });
               view.dispatch(updated);
             }
@@ -418,7 +443,7 @@ export function useProseMirrorEditor({
       view.destroy();
       viewRef.current = null;
     };
-  }, [plugins]);
+  }, [plugins, isEnabled]);
 
   useEffect(() => {
     const view = viewRef.current;

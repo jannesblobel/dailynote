@@ -237,7 +237,8 @@ export function createEncryptedImageRepository(vaultKey: CryptoKey): ImageReposi
       noteDate: string,
       file: Blob,
       type: 'background' | 'inline',
-      filename: string
+      filename: string,
+      options?: { width?: number; height?: number }
     ): Promise<NoteImage> {
       const imageId = generateUuid();
 
@@ -251,8 +252,8 @@ export function createEncryptedImageRepository(vaultKey: CryptoKey): ImageReposi
         type,
         filename,
         mimeType: file.type,
-        width: 0, // Will be set by caller after compression
-        height: 0,
+        width: options?.width ?? 0,
+        height: options?.height ?? 0,
         size: file.size,
         createdAt: new Date().toISOString()
       };

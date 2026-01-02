@@ -400,6 +400,37 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.note-editor__content--readonly {
+  padding: 0 var(--spacing-2xl);
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  scrollbar-color: var(--color-border) transparent;
+  scrollbar-width: thin;
+  cursor: default;
+  user-select: text;
+}
+
+.note-editor__content--readonly::-webkit-scrollbar {
+  width: 6px;
+}
+
+.note-editor__content--readonly::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.note-editor__content--readonly::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+.note-editor__placeholder {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
 /* ProseMirror editable surface */
 .note-editor__content .ProseMirror {
   min-height: 100%;
@@ -550,6 +581,27 @@
 .note-editor__content img[data-image-id="uploading"] {
   opacity: 0.5;
   filter: blur(2px);
+}
+
+.note-editor__content img[data-image-loading="true"],
+.note-editor__content img[data-image-id]:not([src]) {
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.15) 25%,
+    rgba(148, 163, 184, 0.3) 37%,
+    rgba(148, 163, 184, 0.15) 63%
+  );
+  background-size: 400% 100%;
+  animation: image-loading 1.4s ease infinite;
+}
+
+@keyframes image-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
 }
 
 /* Vault unlock */
@@ -737,6 +789,10 @@
 
 .sync-indicator--offline {
   color: #d97706;
+}
+
+.sync-indicator--pending {
+  color: #2563eb;
 }
 
 .sync-indicator__spinner {

@@ -47,6 +47,7 @@ function App() {
                 onDayClick={activeVault.isVaultUnlocked ? navigateToDate : undefined}
                 onYearChange={navigateToYear}
                 syncStatus={appMode.mode === AppMode.Cloud && activeVault.isVaultUnlocked ? notes.syncStatus : undefined}
+                pendingOps={appMode.mode === AppMode.Cloud && activeVault.isVaultUnlocked ? notes.pendingOps : undefined}
                 onSignIn={appMode.mode !== AppMode.Cloud && auth.authState !== AuthState.SignedIn ? appMode.switchToCloud : undefined}
                 onSignOut={appMode.mode === AppMode.Cloud && auth.authState === AuthState.SignedIn ? activeVault.handleSignOut : undefined}
               />

@@ -11,13 +11,15 @@ export interface ImageRepository {
    * @param file - The image blob to upload
    * @param type - Whether this is a background or inline image
    * @param filename - Original filename
+   * @param options - Optional metadata hints (dimensions are used for layout placeholders)
    * @returns Metadata for the uploaded image
    */
   upload(
     noteDate: string,
     file: Blob,
     type: 'background' | 'inline',
-    filename: string
+    filename: string,
+    options?: { width?: number; height?: number }
   ): Promise<NoteImage>;
 
   /**

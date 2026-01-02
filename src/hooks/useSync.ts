@@ -1,72 +1,119 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SyncStatus } from '../types';
 import type { UnifiedSyncedNoteRepository } from '../storage/unifiedSyncedNoteRepository';
+import type { PendingOpsSummary, SyncService } from '../services/syncService';
+import { createSyncService, getPendingOpsSummary } from '../services/syncService';
 
 interface UseSyncReturn {
   syncStatus: SyncStatus;
   lastSynced: Date | null;
   triggerSync: (options?: { immediate?: boolean }) => void;
+  queueIdleSync: (options?: { delayMs?: number }) => void;
+  pendingOps: PendingOpsSummary;
 }
 
 export function useSync(repository: UnifiedSyncedNoteRepository | null): UseSyncReturn {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncStatus.Idle);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
-  const syncTimeoutRef = useRef<number | null>(null);
-  const isSyncingRef = useRef(false);
+  const [pendingOps, setPendingOps] = useState<PendingOpsSummary>({
+    notes: 0,
+    images: 0,
+    total: 0
+  });
+  const syncServiceRef = useRef<SyncService | null>(null);
+  const pendingPollRef = useRef<number | null>(null);
+  const scheduleStateUpdate = useCallback((fn: () => void) => {
+    if (typeof queueMicrotask === 'function') {
+      queueMicrotask(fn);
+      return;
+    }
+    Promise.resolve().then(fn);
+  }, []);
 
   // Subscribe to repository sync status changes
+  const refreshPendingOps = useCallback(async () => {
+    try {
+      const summary = await getPendingOpsSummary();
+      setPendingOps(summary);
+    } catch {
+      setPendingOps({ notes: 0, images: 0, total: 0 });
+    }
+  }, []);
+
   useEffect(() => {
     if (!repository) {
-      setSyncStatus(SyncStatus.Idle);
+      scheduleStateUpdate(() => setSyncStatus(SyncStatus.Idle));
       return;
     }
 
-    setSyncStatus(repository.getSyncStatus());
+    scheduleStateUpdate(() => setSyncStatus(repository.getSyncStatus()));
     return repository.onSyncStatusChange((status) => {
       setSyncStatus(status);
       if (status === SyncStatus.Synced) {
         setLastSynced(new Date());
+        void refreshPendingOps();
+      }
+      if (status === SyncStatus.Error) {
+        void refreshPendingOps();
       }
     });
-  }, [repository]);
+  }, [repository, refreshPendingOps, scheduleStateUpdate]);
 
-  // Sync function with debounce
-  const triggerSync = useCallback((options?: { immediate?: boolean }) => {
-    if (!repository || isSyncingRef.current) return;
-
-    // Clear existing timeout
-    if (syncTimeoutRef.current) {
-      window.clearTimeout(syncTimeoutRef.current);
-    }
-
-    if (options?.immediate) {
-      isSyncingRef.current = true;
-      void (async () => {
-        try {
-          await repository.sync();
-        } finally {
-          isSyncingRef.current = false;
-        }
-      })();
+  useEffect(() => {
+    if (!repository) {
+      if (syncServiceRef.current) {
+        syncServiceRef.current.dispose();
+        syncServiceRef.current = null;
+      }
+      if (pendingPollRef.current) {
+        window.clearInterval(pendingPollRef.current);
+        pendingPollRef.current = null;
+      }
+      scheduleStateUpdate(() => setPendingOps({ notes: 0, images: 0, total: 0 }));
       return;
     }
 
-    // Debounce sync by 2 seconds
-    syncTimeoutRef.current = window.setTimeout(async () => {
-      if (isSyncingRef.current) return;
-      isSyncingRef.current = true;
-      try {
-        await repository.sync();
-      } finally {
-        isSyncingRef.current = false;
+    if (syncServiceRef.current) {
+      syncServiceRef.current.dispose();
+    }
+    syncServiceRef.current = createSyncService(repository);
+    window.setTimeout(() => {
+      void refreshPendingOps();
+    }, 0);
+
+    if (!pendingPollRef.current) {
+      pendingPollRef.current = window.setInterval(() => {
+        void refreshPendingOps();
+      }, 5000);
+    }
+
+    return () => {
+      if (syncServiceRef.current) {
+        syncServiceRef.current.dispose();
+        syncServiceRef.current = null;
       }
-    }, 2000);
-  }, [repository]);
+      if (pendingPollRef.current) {
+        window.clearInterval(pendingPollRef.current);
+        pendingPollRef.current = null;
+      }
+    };
+  }, [repository, refreshPendingOps, scheduleStateUpdate]);
+
+  // Sync function with debounce
+  const triggerSync = useCallback((options?: { immediate?: boolean }) => {
+    syncServiceRef.current?.queueSync(options);
+    void refreshPendingOps();
+  }, [refreshPendingOps]);
+
+  const queueIdleSync = useCallback((options?: { delayMs?: number }) => {
+    syncServiceRef.current?.queueIdleSync(options);
+    void refreshPendingOps();
+  }, [refreshPendingOps]);
 
   useEffect(() => {
     if (!repository) return;
-    triggerSync({ immediate: true });
-  }, [repository, triggerSync]);
+    scheduleStateUpdate(() => triggerSync({ immediate: true }));
+  }, [repository, triggerSync, scheduleStateUpdate]);
 
   // Update offline status
   useEffect(() => {
@@ -80,8 +127,8 @@ export function useSync(repository: UnifiedSyncedNoteRepository | null): UseSync
 
   useEffect(() => {
     return () => {
-      if (syncTimeoutRef.current) {
-        window.clearTimeout(syncTimeoutRef.current);
+      if (syncServiceRef.current) {
+        syncServiceRef.current.dispose();
       }
     };
   }, []);
@@ -89,6 +136,8 @@ export function useSync(repository: UnifiedSyncedNoteRepository | null): UseSync
   return {
     syncStatus,
     lastSynced,
-    triggerSync
+    triggerSync,
+    queueIdleSync,
+    pendingOps
   };
 }

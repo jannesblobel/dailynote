@@ -8,6 +8,8 @@ interface NoteEditorViewProps {
   placeholderText: string;
   editorRef: RefObject<HTMLDivElement | null>;
   isDraggingImage?: boolean;
+  contentHtml: string;
+  showReadonlyPlaceholder: boolean;
 }
 
 export function NoteEditorView({
@@ -17,7 +19,9 @@ export function NoteEditorView({
   statusText,
   placeholderText,
   editorRef,
-  isDraggingImage = false
+  isDraggingImage = false,
+  contentHtml,
+  showReadonlyPlaceholder
 }: NoteEditorViewProps) {
   return (
     <div className="note-editor">
@@ -37,12 +41,26 @@ export function NoteEditorView({
         )}
       </div>
       <div className="note-editor__body">
-        <div
-          ref={editorRef}
-          className="note-editor__content"
-          data-placeholder={placeholderText}
-          aria-readonly={!isEditable}
-        />
+        {isEditable ? (
+          <div
+            ref={editorRef}
+            className="note-editor__content"
+            data-placeholder={placeholderText}
+            aria-readonly={!isEditable}
+          />
+        ) : (
+          <div
+            ref={editorRef}
+            className="note-editor__content note-editor__content--readonly"
+            aria-readonly="true"
+          >
+            {showReadonlyPlaceholder ? (
+              <p className="note-editor__placeholder">{placeholderText}</p>
+            ) : (
+              <div dangerouslySetInnerHTML={{ __html: contentHtml }} />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -29,6 +29,8 @@ export interface UseNoteRepositoryReturn {
   syncedRepo: UnifiedSyncedNoteRepository | null;
   syncStatus: ReturnType<typeof useSync>['syncStatus'];
   triggerSync: ReturnType<typeof useSync>['triggerSync'];
+  queueIdleSync: ReturnType<typeof useSync>['queueIdleSync'];
+  pendingOps: ReturnType<typeof useSync>['pendingOps'];
   content: string;
   setContent: (content: string) => void;
   hasEdits: boolean;
@@ -77,7 +79,7 @@ export function useNoteRepository({
 
   const syncedRepo =
     mode === AppMode.Cloud && userId ? (repository as UnifiedSyncedNoteRepository) : null;
-  const { syncStatus, triggerSync } = useSync(syncedRepo);
+  const { syncStatus, triggerSync, queueIdleSync, pendingOps } = useSync(syncedRepo);
   const { hasNote, noteDates, refreshNoteDates } = useNoteDates(repository, year);
   const refreshTimerRef = useRef<number | null>(null);
   const handleAfterSave = useCallback(() => {
@@ -88,7 +90,8 @@ export function useNoteRepository({
       refreshTimerRef.current = null;
       refreshNoteDates();
     }, 500);
-  }, [refreshNoteDates]);
+    queueIdleSync();
+  }, [queueIdleSync, refreshNoteDates]);
 
   useEffect(() => {
     return () => {
@@ -112,6 +115,8 @@ export function useNoteRepository({
     syncedRepo,
     syncStatus,
     triggerSync,
+    queueIdleSync,
+    pendingOps,
     content,
     setContent,
     hasEdits,
