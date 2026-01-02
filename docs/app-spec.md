@@ -40,13 +40,13 @@ Refs: src/utils/date.ts, src/utils/noteRules.ts, src/components/Calendar/DayCell
 
 ## 4) App Modes
 ### 4.1 Local Mode (default)
-- Notes stored locally in IndexedDB and encrypted with a local vault key.
-- No account required.
+- Notes stored locally in a single unified IndexedDB dataset.
+- No account required; local storage is the source of truth.
 
 ### 4.2 Cloud Mode (opt-in)
 - Authenticated via Supabase.
-- Notes encrypted client-side and synced to Supabase.
-- Local encrypted sync cache used for offline access.
+- Cloud is a replica: notes are synced on save and during periodic sync.
+- The same local dataset is used in both modes.
 
 Refs: src/hooks/useAppMode.ts, src/hooks/useNoteRepository.ts
 
@@ -77,12 +77,13 @@ Refs: src/hooks/useLocalVault.ts, src/storage/vault.ts
 
 ### 6.3 Cloud Vault
 - On sign-in, tries to unlock with device-wrapped DEK first.
-- If not available, uses password to derive KEK and unwrap DEK from Supabase user_keys.
+- If not available, uses password to derive KEK and unwrap DEKs from Supabase user_keyrings.
 - New cloud users: generate DEK (or reuse local vault key), wrap with KEK, save to
-  user_keys.
+  user_keyrings as primary.
+- All locally known keys are uploaded to user_keyrings on sign-in.
 - Device-wrapped DEK stored for future auto-unlock.
 
-Refs: src/hooks/useVault.ts, src/storage/userKeys.ts, src/storage/vault.ts
+Refs: src/hooks/useVault.ts, src/storage/userKeyring.ts, src/storage/vault.ts
 
 ### 6.4 Cloud DEK Cache
 - Cloud DEK is cached locally, encrypted with the local vault key.
@@ -91,33 +92,25 @@ Refs: src/hooks/useVault.ts, src/storage/userKeys.ts, src/storage/vault.ts
 Ref: src/storage/cloudCache.ts
 
 ## 7) Storage Architecture
-### 7.1 Local Notes (Local Mode)
-- IndexedDB: dailynotes-notes, object store: notes.
-- Encrypted payload includes {date, content, updatedAt}.
+### 7.1 Unified Local Dataset
+- IndexedDB: dailynotes-unified.
+- Object stores: notes, note_meta, images, image_meta, sync_state.
+- Notes stored encrypted (content only) with metadata in note_meta.
+- Images stored encrypted locally with metadata in image_meta.
+- Notes/images carry key_id to select the correct DEK.
 
-Ref: src/storage/noteStorage.ts
+Refs: src/storage/unifiedDb.ts, src/storage/unifiedNoteRepository.ts,
+      src/storage/unifiedImageRepository.ts
 
-### 7.2 Local Sync Cache (Cloud Mode)
-- IndexedDB: dailynotes-synced, object store: notes.
-- Encrypted payload includes only {content}.
-- Metadata stored in plaintext: id, revision, updatedAt, serverUpdatedAt, deleted,
-  dirty.
+### 7.2 Cloud Replication (Supabase)
+- Notes replicated to Supabase notes table (encrypted client-side).
+- Images uploaded as encrypted blobs to Supabase Storage.
+- note_images stores metadata for ciphertext blobs and thumbnails.
+- user_keyrings stores wrapped DEKs (multi-key support).
+- note key_id indicates which DEK to use for decryption.
 
-Ref: src/storage/syncedNoteRepository.ts
-
-### 7.3 Images
-#### Local Mode
-- IndexedDB: dailynotes-images, object stores: images (encrypted blobs), image_meta.
-- Image blobs encrypted with vault key; metadata stored separately.
-
-Ref: src/storage/localImageStorage.ts
-
-#### Cloud Mode
-- Supabase Storage bucket: note-images.
-- note_images table for metadata.
-- Images stored unencrypted, access controlled via RLS.
-
-Refs: src/storage/cloudImageStorage.ts, supabase/migrations/20260102_create_note_images.sql
+Refs: src/storage/unifiedSyncedNoteRepository.ts, src/storage/unifiedImageSyncService.ts,
+      supabase/migrations/20260201_update_note_images_for_encryption.sql
 
 ## 8) Note Editing and Sanitization
 - ContentEditable editor stores HTML.
@@ -173,14 +166,11 @@ Ref: src/storage/syncService.ts
 
 ### 12.4 Sync Algorithm (High Level)
 1) If offline, set status to Offline, return.
-2) Process dirty local notes:
-   - If deleted, mark remote deleted (if id exists) and mark local deleted.
-   - If remote exists, resolve conflict; push or overwrite local accordingly.
-   - If remote missing, push local.
-3) Pull remote updates not handled above.
-4) If remote index not empty, mark local notes missing remotely as deleted.
+2) Push pending local ops (upsert/delete) to Supabase.
+3) Pull remote updates using cursor (server_updated_at > last cursor).
+4) Apply remote updates only when newer; never infer deletions from missing index.
 
-Ref: src/storage/syncedNoteRepository.ts
+Ref: src/storage/unifiedSyncedNoteRepository.ts
 
 ### 12.5 Optimistic Concurrency
 - Remote updates use server_updated_at to detect conflicts.
@@ -188,12 +178,13 @@ Ref: src/storage/syncedNoteRepository.ts
 
 Ref: src/storage/syncService.ts
 
-## 13) Local-to-Cloud Migration
-- One-time migration copies encrypted local notes into cloud repo.
-- Marks migration complete in localStorage (dailynote_local_migrated_v1).
-- Triggers sync after migration.
+## 13) Legacy Migration
+- One-time migration imports legacy local/synced stores into unified dataset.
+- Re-encrypts legacy data using the same source DEK (no cross-key re-encryption).
+- Marks migration complete in localStorage (dailynotes_unified_migrated_v1).
+- Triggers sync after migration when in cloud mode.
 
-Ref: src/hooks/useLocalMigration.ts
+Ref: src/hooks/useUnifiedMigration.ts
 
 ## 14) Inline Images
 - Paste/drop image inserts placeholder with data-image-id="uploading".
@@ -300,4 +291,3 @@ Ref: src/utils/sanitize.ts
 - Same sync algorithm and conflict resolution.
 - Same URL routing and modal flows.
 - Same inline image upload + resolution behavior.
-

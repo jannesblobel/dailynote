@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { fetchUserKeys, saveUserKeys } from '../storage/userKeys';
-import type { UserKeys } from '../storage/userKeys';
+import { fetchUserKeys } from '../storage/userKeys';
+import { fetchUserKeyring, saveUserKeyringEntry } from '../storage/userKeyring';
+import type { UserKeyringEntry } from '../storage/userKeyring';
+import { computeKeyId } from '../storage/keyId';
 import {
   deriveKEK,
   generateDEK,
@@ -11,12 +13,13 @@ import {
   generateSalt,
   DEFAULT_KDF_ITERATIONS,
   storeDeviceWrappedDEK,
-  tryUnlockWithDeviceDEK,
-  updatePasswordWrappedKey
+  tryUnlockWithDeviceDEK
 } from '../storage/vault';
 
 export interface UseVaultReturn {
   vaultKey: CryptoKey | null;
+  keyring: Map<string, CryptoKey>;
+  primaryKeyId: string | null;
   isReady: boolean;
   isLocked: boolean;
   isBusy: boolean;
@@ -27,6 +30,7 @@ interface UseVaultProps {
   user: User | null;
   password: string | null;
   localDek: CryptoKey | null;
+  localKeyring: Map<string, CryptoKey>;
   onPasswordConsumed: () => void;
 }
 
@@ -34,9 +38,12 @@ export function useVault({
   user,
   password,
   localDek,
+  localKeyring,
   onPasswordConsumed
 }: UseVaultProps): UseVaultReturn {
   const [vaultKey, setVaultKey] = useState<CryptoKey | null>(null);
+  const [keyring, setKeyring] = useState<Map<string, CryptoKey>>(new Map());
+  const [primaryKeyId, setPrimaryKeyId] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,9 +52,11 @@ export function useVault({
   // Try device unlock when user signs in
   useEffect(() => {
     if (!user) {
-      setVaultKey(null);
-      setIsReady(true);
-      return;
+        setVaultKey(null);
+        setKeyring(new Map());
+        setPrimaryKeyId(null);
+        setIsReady(true);
+        return;
     }
 
     let cancelled = false;
@@ -55,7 +64,10 @@ export function useVault({
     const tryDeviceUnlock = async () => {
       const dek = await tryUnlockWithDeviceDEK();
       if (!cancelled && dek) {
+        const keyId = await computeKeyId(dek);
         setVaultKey(dek);
+        setKeyring(new Map([[keyId, dek]]));
+        setPrimaryKeyId(keyId);
       }
       if (!cancelled) {
         setIsReady(true);
@@ -81,44 +93,139 @@ export function useVault({
 
     const unlock = async () => {
       try {
+        const nextKeyring = new Map<string, CryptoKey>();
+        let nextPrimaryId: string | null = null;
+
         // Fetch existing keys from Supabase
-        const existingKeys = await fetchUserKeys(supabase, user.id);
+        let existingKeyrings = await fetchUserKeyring(supabase, user.id);
+        if (!existingKeyrings.length) {
+          const legacy = await fetchUserKeys(supabase, user.id);
+          if (legacy) {
+            const kek = await deriveKEK(
+              password,
+              legacy.kdfSalt,
+              legacy.kdfIterations
+            );
+            const dek = await unwrapDEK(legacy.wrappedDek, legacy.dekIv, kek);
+            const migrated: UserKeyringEntry = {
+              keyId: 'legacy',
+              wrappedDek: legacy.wrappedDek,
+              dekIv: legacy.dekIv,
+              kdfSalt: legacy.kdfSalt,
+              kdfIterations: legacy.kdfIterations,
+              version: legacy.version,
+              isPrimary: true
+            };
+            await saveUserKeyringEntry(supabase, user.id, migrated);
+            existingKeyrings = [migrated];
+            nextKeyring.set('legacy', dek);
+            nextPrimaryId = 'legacy';
+          }
+        }
 
-        let dek: CryptoKey;
+        let dek: CryptoKey | null = null;
 
-        if (existingKeys) {
-          // Derive KEK from password and unwrap existing DEK
-          const kek = await deriveKEK(
-            password,
-            existingKeys.kdfSalt,
-            existingKeys.kdfIterations
-          );
-          dek = await unwrapDEK(existingKeys.wrappedDek, existingKeys.dekIv, kek);
-        } else {
-          // New user: generate DEK, wrap with password-derived KEK, save to Supabase
+        if (existingKeyrings.length && !nextKeyring.size) {
+          for (const entry of existingKeyrings) {
+            const kek = await deriveKEK(
+              password,
+              entry.kdfSalt,
+              entry.kdfIterations
+            );
+            const unwrapped = await unwrapDEK(entry.wrappedDek, entry.dekIv, kek);
+            nextKeyring.set(entry.keyId, unwrapped);
+            if (entry.isPrimary && !nextPrimaryId) {
+              nextPrimaryId = entry.keyId;
+            }
+          }
+        }
+
+        if (!nextPrimaryId && existingKeyrings.length) {
+          nextPrimaryId = existingKeyrings[0]?.keyId ?? null;
+          if (nextPrimaryId) {
+            await saveUserKeyringEntry(supabase, user.id, {
+              ...existingKeyrings[0],
+              isPrimary: true
+            });
+          }
+        }
+
+        if (!existingKeyrings.length) {
           const salt = generateSalt();
           const kek = await deriveKEK(password, salt, DEFAULT_KDF_ITERATIONS);
           dek = localDek ?? await generateDEK();
           const wrapped = await wrapDEK(dek, kek);
-
-          const newKeys: UserKeys = {
+          const keyId = await computeKeyId(dek);
+          const entry: UserKeyringEntry = {
+            keyId,
             wrappedDek: wrapped.data,
             dekIv: wrapped.iv,
             kdfSalt: salt,
             kdfIterations: DEFAULT_KDF_ITERATIONS,
-            version: 1
+            version: 1,
+            isPrimary: true
           };
+          await saveUserKeyringEntry(supabase, user.id, entry);
+          nextKeyring.set(keyId, dek);
+          nextPrimaryId = keyId;
+        }
 
-          await saveUserKeys(supabase, user.id, newKeys);
-          if (localDek) {
-            await updatePasswordWrappedKey(localDek, password);
+        if (localDek) {
+          const localKeyId = await computeKeyId(localDek);
+          if (!nextKeyring.has(localKeyId)) {
+            const salt = generateSalt();
+            const kek = await deriveKEK(password, salt, DEFAULT_KDF_ITERATIONS);
+            const wrapped = await wrapDEK(localDek, kek);
+            const entry: UserKeyringEntry = {
+              keyId: localKeyId,
+              wrappedDek: wrapped.data,
+              dekIv: wrapped.iv,
+              kdfSalt: salt,
+              kdfIterations: DEFAULT_KDF_ITERATIONS,
+              version: 1,
+              isPrimary: false
+            };
+            await saveUserKeyringEntry(supabase, user.id, entry);
+            nextKeyring.set(localKeyId, localDek);
           }
         }
 
+        if (localKeyring.size) {
+          for (const [keyId, key] of localKeyring.entries()) {
+            if (nextKeyring.has(keyId)) continue;
+            const salt = generateSalt();
+            const kek = await deriveKEK(password, salt, DEFAULT_KDF_ITERATIONS);
+            const wrapped = await wrapDEK(key, kek);
+            const entry: UserKeyringEntry = {
+              keyId,
+              wrappedDek: wrapped.data,
+              dekIv: wrapped.iv,
+              kdfSalt: salt,
+              kdfIterations: DEFAULT_KDF_ITERATIONS,
+              version: 1,
+              isPrimary: false
+            };
+            await saveUserKeyringEntry(supabase, user.id, entry);
+            nextKeyring.set(keyId, key);
+          }
+        }
+
+        if (!nextPrimaryId && nextKeyring.size) {
+          nextPrimaryId = Array.from(nextKeyring.keys())[0] ?? null;
+        }
+
+        if (nextPrimaryId) {
+          dek = nextKeyring.get(nextPrimaryId) ?? null;
+        }
+
         // Store device-wrapped DEK for future auto-unlock
-        await storeDeviceWrappedDEK(dek);
+        if (dek) {
+          await storeDeviceWrappedDEK(dek);
+        }
 
         setVaultKey(dek);
+        setKeyring(nextKeyring);
+        setPrimaryKeyId(nextPrimaryId);
         setError(null);
       } catch (err) {
         console.error('Vault unlock error:', err);
@@ -132,7 +239,7 @@ export function useVault({
     };
 
     void unlock();
-  }, [user, password, vaultKey, localDek, onPasswordConsumed]);
+  }, [user, password, vaultKey, localDek, localKeyring, onPasswordConsumed]);
 
   // Clear vault on sign out
   const clearVault = useCallback(async () => {
@@ -148,6 +255,8 @@ export function useVault({
 
   return {
     vaultKey,
+    keyring,
+    primaryKeyId,
     isReady,
     isLocked: !vaultKey,
     isBusy,

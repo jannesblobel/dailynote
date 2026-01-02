@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import { Calendar } from './components/Calendar';
 import { AppModals } from './components/AppModals';
 import { useUrlState } from './hooks/useUrlState';
 import { AuthState, useAuth } from './hooks/useAuth';
 import { AppMode, useAppMode } from './hooks/useAppMode';
 import { useActiveVault } from './hooks/useActiveVault';
-import { useLocalMigration } from './hooks/useLocalMigration';
 import { useNoteRepository } from './hooks/useNoteRepository';
 import { AppModeProvider } from './contexts/AppModeProvider';
 import { ActiveVaultProvider } from './contexts/ActiveVaultProvider';
@@ -26,24 +24,14 @@ function App() {
     mode: appMode.mode,
     setMode: appMode.setMode
   });
-  const [hasMigratedLocal, setHasMigratedLocal] = useState(false);
   const notes = useNoteRepository({
     mode: appMode.mode,
     authUser: auth.user,
     vaultKey: activeVault.vaultKey,
-    cloudCacheKey: activeVault.cachedCloudVaultKey,
+    keyring: activeVault.keyring,
+    activeKeyId: activeVault.activeKeyId,
     date,
     year
-  });
-
-  useLocalMigration({
-    mode: appMode.mode,
-    cloudRepo: notes.syncedRepo,
-    cloudKey: activeVault.vaultKey,
-    localKey: activeVault.localVault.vaultKey,
-    hasMigrated: hasMigratedLocal,
-    onMigrated: () => setHasMigratedLocal(true),
-    triggerSync: notes.triggerSync
   });
 
   return (

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { UseAuthReturn } from './useAuth';
 import { useLocalVault } from './useLocalVault';
 import { useVault } from './useVault';
 import { AppMode } from './useAppMode';
 import { tryUnlockWithDeviceDEK } from '../storage/vault';
-import { cacheCloudDek, restoreCloudDek } from '../storage/cloudCache';
+import { computeKeyId } from '../storage/keyId';
+import { listLocalKeyIds, restoreLocalWrappedKey, storeLocalWrappedKey } from '../storage/localKeyring';
 
 interface UseActiveVaultProps {
   auth: UseAuthReturn;
@@ -18,8 +19,10 @@ export interface UseActiveVaultReturn {
   cloudVault: ReturnType<typeof useVault>;
   authPassword: string | null;
   localPassword: string | null;
-  cachedCloudVaultKey: CryptoKey | null;
   vaultKey: CryptoKey | null;
+  keyring: Map<string, CryptoKey>;
+  activeKeyId: string | null;
+  cloudPrimaryKey: CryptoKey | null;
   isVaultReady: boolean;
   isVaultLocked: boolean;
   isVaultUnlocked: boolean;
@@ -36,6 +39,8 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
   const [authPassword, setAuthPassword] = useState<string | null>(null);
   const [localPassword, setLocalPassword] = useState<string | null>(null);
   const [restoredCloudVaultKey, setRestoredCloudVaultKey] = useState<CryptoKey | null>(null);
+  const [localKeyId, setLocalKeyId] = useState<string | null>(null);
+  const [localKeyring, setLocalKeyring] = useState<Map<string, CryptoKey>>(new Map());
 
   const handlePasswordConsumed = useCallback(() => {
     setAuthPassword(null);
@@ -45,10 +50,11 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
     user: mode === AppMode.Cloud ? auth.user : null,
     password: authPassword,
     localDek: localVault.vaultKey,
+    localKeyring,
     onPasswordConsumed: handlePasswordConsumed
   });
 
-  const cachedCloudVaultKey = cloudVault.vaultKey ?? restoredCloudVaultKey;
+  const cloudPrimaryKey = cloudVault.vaultKey ?? restoredCloudVaultKey;
 
   useEffect(() => {
     if (cloudVault.vaultKey || restoredCloudVaultKey) return;
@@ -60,11 +66,6 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
         setRestoredCloudVaultKey(dek);
         return;
       }
-      if (cancelled || !localVault.vaultKey) return;
-      const restored = await restoreCloudDek(localVault.vaultKey);
-      if (!cancelled && restored) {
-        setRestoredCloudVaultKey(restored);
-      }
     };
 
     void restoreCloudKey();
@@ -72,14 +73,73 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
     return () => {
       cancelled = true;
     };
-  }, [cloudVault.vaultKey, localVault.vaultKey, restoredCloudVaultKey]);
+  }, [cloudVault.vaultKey, restoredCloudVaultKey]);
 
   useEffect(() => {
-    if (!cloudVault.vaultKey || !localVault.vaultKey) return;
-    void cacheCloudDek(localVault.vaultKey, cloudVault.vaultKey);
-  }, [cloudVault.vaultKey, localVault.vaultKey]);
+    const localKey = localVault.vaultKey;
+    if (!localKey) return;
+    let cancelled = false;
 
-  const vaultKey = mode === AppMode.Cloud ? cloudVault.vaultKey : localVault.vaultKey;
+    const loadLocalKeyring = async () => {
+      const keyId = await computeKeyId(localKey);
+      if (cancelled) return;
+      setLocalKeyId(keyId);
+      const entries = new Map<string, CryptoKey>();
+      entries.set(keyId, localKey);
+
+      const extraKeys = listLocalKeyIds().filter((id) => id !== keyId);
+      for (const id of extraKeys) {
+        try {
+          const restored = await restoreLocalWrappedKey(id, localKey);
+          if (restored) {
+            entries.set(id, restored);
+          }
+        } catch {
+          // Ignore corrupted entries.
+        }
+      }
+      if (!cancelled) {
+        setLocalKeyring(entries);
+      }
+    };
+
+    void loadLocalKeyring();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [localVault.vaultKey]);
+
+  useEffect(() => {
+    const localKey = localVault.vaultKey;
+    if (!localKey || !cloudVault.keyring.size) return;
+
+    const cacheCloudKeys = async () => {
+      for (const [keyId, key] of cloudVault.keyring.entries()) {
+        if (keyId === localKeyId) continue;
+        await storeLocalWrappedKey(keyId, key, localKey);
+      }
+    };
+
+    void cacheCloudKeys();
+  }, [cloudVault.keyring, localVault.vaultKey, localKeyId]);
+
+  const mergedKeyring = useMemo(() => {
+    const merged = new Map<string, CryptoKey>();
+    localKeyring.forEach((value, key) => merged.set(key, value));
+    cloudVault.keyring.forEach((value, key) => merged.set(key, value));
+    if (cloudVault.primaryKeyId && !merged.has('legacy')) {
+      const primary = cloudVault.keyring.get(cloudVault.primaryKeyId);
+      if (primary) {
+        merged.set('legacy', primary);
+      }
+    }
+    return merged;
+  }, [localKeyring, cloudVault.keyring, cloudVault.primaryKeyId]);
+
+  const activeKeyId =
+    mode === AppMode.Cloud && cloudVault.primaryKeyId ? cloudVault.primaryKeyId : localKeyId;
+  const vaultKey = activeKeyId ? mergedKeyring.get(activeKeyId) ?? null : null;
   const isVaultReady = mode === AppMode.Cloud ? cloudVault.isReady : localVault.isReady;
   const isVaultLocked = mode === AppMode.Cloud ? cloudVault.isLocked : localVault.isLocked;
   const vaultError = mode === AppMode.Cloud ? cloudVault.error : localVault.error;
@@ -121,8 +181,10 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
     cloudVault,
     authPassword,
     localPassword,
-    cachedCloudVaultKey,
     vaultKey,
+    keyring: mergedKeyring,
+    activeKeyId,
+    cloudPrimaryKey,
     isVaultReady,
     isVaultLocked,
     isVaultUnlocked,

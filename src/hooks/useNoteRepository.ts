@@ -4,11 +4,10 @@ import { useNoteContent } from './useNoteContent';
 import { useNoteDates } from './useNoteDates';
 import { useSync } from './useSync';
 import { supabase } from '../lib/supabase';
-import { createLocalSyncedNoteRepository, createSyncedNoteRepository } from '../storage/syncedNoteRepository';
-import { createEncryptedNoteRepository } from '../storage/noteStorage';
-import { createEncryptedImageRepository } from '../storage/localImageStorage';
-import { createCloudImageRepository } from '../storage/cloudImageStorage';
-import type { SyncedNoteRepository } from '../storage/syncedNoteRepository';
+import { createUnifiedNoteRepository } from '../storage/unifiedNoteRepository';
+import { createUnifiedSyncedNoteRepository } from '../storage/unifiedSyncedNoteRepository';
+import { createUnifiedImageRepository } from '../storage/unifiedImageRepository';
+import type { UnifiedSyncedNoteRepository } from '../storage/unifiedSyncedNoteRepository';
 import type { NoteRepository } from '../storage/noteRepository';
 import type { ImageRepository } from '../storage/imageRepository';
 import { AppMode } from './useAppMode';
@@ -18,15 +17,16 @@ interface UseNoteRepositoryProps {
   mode: AppMode;
   authUser: User | null;
   vaultKey: CryptoKey | null;
-  cloudCacheKey: CryptoKey | null;
+  keyring: Map<string, CryptoKey>;
+  activeKeyId: string | null;
   date: string | null;
   year: number;
 }
 
 export interface UseNoteRepositoryReturn {
-  repository: NoteRepository | SyncedNoteRepository | null;
+  repository: NoteRepository | UnifiedSyncedNoteRepository | null;
   imageRepository: ImageRepository | null;
-  syncedRepo: SyncedNoteRepository | null;
+  syncedRepo: UnifiedSyncedNoteRepository | null;
   syncStatus: ReturnType<typeof useSync>['syncStatus'];
   triggerSync: ReturnType<typeof useSync>['triggerSync'];
   content: string;
@@ -43,45 +43,37 @@ export function useNoteRepository({
   mode,
   authUser,
   vaultKey,
-  cloudCacheKey,
+  keyring,
+  activeKeyId,
   date,
   year
 }: UseNoteRepositoryProps): UseNoteRepositoryReturn {
-  const repository = useMemo<NoteRepository | SyncedNoteRepository | null>(() => {
+  const repository = useMemo<NoteRepository | UnifiedSyncedNoteRepository | null>(() => {
+    if (!vaultKey || !activeKeyId) return null;
+    const keyProvider = {
+      activeKeyId,
+      getKey: (keyId: string) => keyring.get(keyId) ?? null
+    };
+
     if (mode === AppMode.Cloud && authUser) {
-      if (!vaultKey) return null;
-      return createSyncedNoteRepository(supabase, authUser.id, vaultKey);
+      return createUnifiedSyncedNoteRepository(supabase, authUser.id, keyProvider);
     }
 
-    if (cloudCacheKey && (!authUser || mode === AppMode.Local)) {
-      return createLocalSyncedNoteRepository(cloudCacheKey);
-    }
-
-    if (!vaultKey) return null;
-
-    return createEncryptedNoteRepository(vaultKey);
-  }, [mode, authUser, vaultKey, cloudCacheKey]);
+    return createUnifiedNoteRepository(keyProvider);
+  }, [mode, authUser, vaultKey, keyring, activeKeyId]);
 
   const imageRepository = useMemo<ImageRepository | null>(() => {
-    if (mode === AppMode.Cloud && authUser) {
-      return createCloudImageRepository(supabase, authUser.id);
-    }
+    if (!vaultKey || !activeKeyId) return null;
+    const keyProvider = {
+      activeKeyId,
+      getKey: (keyId: string) => keyring.get(keyId) ?? null
+    };
+    return createUnifiedImageRepository(keyProvider);
+  }, [vaultKey, keyring, activeKeyId]);
 
-    // For local mode (both encrypted and local synced)
-    if (vaultKey) {
-      return createEncryptedImageRepository(vaultKey);
-    }
-
-    if (cloudCacheKey) {
-      return createEncryptedImageRepository(cloudCacheKey);
-    }
-
-    return null;
-  }, [mode, authUser, vaultKey, cloudCacheKey]);
-
-  const syncedRepo = mode === AppMode.Cloud ? repository as SyncedNoteRepository : null;
+  const syncedRepo =
+    mode === AppMode.Cloud && authUser ? (repository as UnifiedSyncedNoteRepository) : null;
   const { syncStatus, triggerSync } = useSync(syncedRepo);
-
   const { hasNote, noteDates, refreshNoteDates } = useNoteDates(repository, year);
   const refreshTimerRef = useRef<number | null>(null);
   const handleAfterSave = useCallback(() => {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SyncStatus } from '../types';
-import type { SyncedNoteRepository } from '../storage/syncedNoteRepository';
+import type { UnifiedSyncedNoteRepository } from '../storage/unifiedSyncedNoteRepository';
 
 interface UseSyncReturn {
   syncStatus: SyncStatus;
@@ -8,7 +8,7 @@ interface UseSyncReturn {
   triggerSync: (options?: { immediate?: boolean }) => void;
 }
 
-export function useSync(repository: SyncedNoteRepository | null): UseSyncReturn {
+export function useSync(repository: UnifiedSyncedNoteRepository | null): UseSyncReturn {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncStatus.Idle);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const syncTimeoutRef = useRef<number | null>(null);
@@ -62,6 +62,11 @@ export function useSync(repository: SyncedNoteRepository | null): UseSyncReturn 
       }
     }, 2000);
   }, [repository]);
+
+  useEffect(() => {
+    if (!repository) return;
+    triggerSync({ immediate: true });
+  }, [repository, triggerSync]);
 
   // Update offline status
   useEffect(() => {
