@@ -124,7 +124,8 @@ export function useAuth(): UseAuthReturn {
     setIsBusy(true);
     setError(null);
     try {
-      await supabase.auth.signOut();
+      // Use 'local' scope to clear session even if server session is already invalid
+      await supabase.auth.signOut({ scope: 'local' });
     } finally {
       setIsBusy(false);
     }
