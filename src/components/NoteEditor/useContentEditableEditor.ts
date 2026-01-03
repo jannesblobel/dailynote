@@ -183,7 +183,12 @@ export function useContentEditableEditor({
     }
     for (const textNode of textNodesToReplace) {
       const hr = document.createElement('hr');
-      textNode.parentNode?.replaceChild(hr, textNode);
+      const br = document.createElement('br');
+      const parent = textNode.parentNode;
+      if (parent) {
+        parent.replaceChild(hr, textNode);
+        hr.after(br);
+      }
     }
 
     // Linkify any URLs in text nodes
@@ -195,12 +200,17 @@ export function useContentEditableEditor({
       const selection = window.getSelection();
       if (selection) {
         if (didInsertHr) {
-          // Place cursor after the last <hr>
+          // Place cursor after the <br> following the last <hr>
           const hrs = el.querySelectorAll('hr');
           if (hrs.length > 0) {
             const lastHr = hrs[hrs.length - 1];
+            const nextSibling = lastHr.nextSibling;
             const range = document.createRange();
-            range.setStartAfter(lastHr);
+            if (nextSibling) {
+              range.setStartAfter(nextSibling);
+            } else {
+              range.setStartAfter(lastHr);
+            }
             range.collapse(true);
             selection.removeAllRanges();
             selection.addRange(range);
