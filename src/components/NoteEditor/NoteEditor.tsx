@@ -92,11 +92,15 @@ export function NoteEditor({
       if (document.activeElement === el) {
         const selection = window.getSelection();
         if (selection) {
+          // Save scroll position before manipulating selection
+          const scrollTop = el.scrollTop;
           const range = document.createRange();
           range.selectNodeContents(el);
           range.collapse(false);
           selection.removeAllRanges();
           selection.addRange(range);
+          // Restore scroll position - selection changes can cause scroll jumps on mobile
+          el.scrollTop = scrollTop;
         }
       }
       if (document.activeElement === el) {

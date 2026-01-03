@@ -101,6 +101,7 @@ export function useContentEditableEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const lastContentRef = useRef('');
   const lastSignatureRef = useRef('');
+  const isLocalEditRef = useRef(false);
   const isEditableRef = useRef(isEditable);
   const onChangeRef = useRef(onChange);
   const onUserInputRef = useRef(onUserInput);
@@ -154,6 +155,15 @@ export function useContentEditableEditor({
   useEffect(() => {
     const el = editorRef.current;
     if (!el) return;
+    // Skip innerHTML update if this content change came from local user input
+    // This prevents scroll jumps on mobile caused by re-setting innerHTML
+    if (isLocalEditRef.current) {
+      isLocalEditRef.current = false;
+      lastContentRef.current = content || '';
+      lastSignatureRef.current = getContentSignature(content || '');
+      updateEmptyState();
+      return;
+    }
     if (content === lastContentRef.current) {
       updateEmptyState();
       return;
@@ -242,6 +252,7 @@ export function useContentEditableEditor({
     }
     lastSignatureRef.current = signature;
     lastContentRef.current = html;
+    isLocalEditRef.current = true;
     onChangeRef.current(html);
     onUserInputRef.current?.();
   }, [getContentSignature, updateEmptyState]);
