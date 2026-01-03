@@ -7,7 +7,6 @@ const ADDITION_WINDOW_MS = 10 * 60 * 1000;
 
 interface ContentEditableOptions {
   content: string;
-  noteDate: string;
   isEditable: boolean;
   placeholderText: string;
   onChange: (content: string) => void;
@@ -93,36 +92,9 @@ function restoreCursorPosition(
   }
 }
 
-function getBlockElements(element: HTMLElement): HTMLElement[] {
-  return Array.from(element.querySelectorAll<HTMLElement>('p, div'));
-}
-
-function isEmptyBlock(element: HTMLElement): boolean {
-  if (element.tagName !== 'P' && element.tagName !== 'DIV') return false;
-  const text = (element.textContent ?? '').trim();
-  if (text.length > 0) return false;
-  return element.querySelector('img') === null;
-}
-
-function buildSelectorPath(element: Element, root: Element): string | null {
-  const segments: string[] = [];
-  let current: Element | null = element;
-  while (current && current !== root) {
-    const parent: Element | null = current.parentElement;
-    if (!parent) return null;
-    const siblings = Array.from(parent.children);
-    const index = siblings.indexOf(current);
-    if (index < 0) return null;
-    segments.push(`${current.tagName.toLowerCase()}:nth-child(${index + 1})`);
-    current = parent;
-  }
-  if (current !== root) return null;
-  return `.note-editor__content > ${segments.reverse().join(' > ')}`;
-}
-
-function formatAdditionLabel(timestamp: string): string | null {
+function formatTimestampLabel(timestamp: string): string {
   const parsed = new Date(timestamp);
-  if (Number.isNaN(parsed.getTime())) return null;
+  if (Number.isNaN(parsed.getTime())) return '';
   const time = parsed.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit'
@@ -132,6 +104,26 @@ function formatAdditionLabel(timestamp: string): string | null {
 
 function escapeCssContent(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\A ');
+}
+
+function createTimestampHr(timestamp: string): HTMLHRElement {
+  const hr = document.createElement('hr');
+  hr.setAttribute(TIMESTAMP_ATTR, timestamp);
+  hr.setAttribute('contenteditable', 'false');
+  return hr;
+}
+
+function getLastEditTimestamp(element: HTMLElement): number | null {
+  // Check for timestamp HR elements
+  const hrs = Array.from(element.querySelectorAll<HTMLHRElement>(`hr[${TIMESTAMP_ATTR}]`));
+  if (hrs.length === 0) return null;
+  
+  const timestamps = hrs
+    .map(hr => Date.parse(hr.getAttribute(TIMESTAMP_ATTR) || ''))
+    .filter(ts => !Number.isNaN(ts));
+  
+  if (timestamps.length === 0) return null;
+  return Math.max(...timestamps);
 }
 
 export function useContentEditableEditor({
@@ -151,83 +143,91 @@ export function useContentEditableEditor({
   const onUserInputRef = useRef(onUserInput);
   const onImageDropRef = useRef(onImageDrop);
   const onDropCompleteRef = useRef(onDropComplete);
-  const knownBlocksRef = useRef<WeakSet<Element>>(new WeakSet());
-  const styleId = `note-editor-additions-${useId()}`;
+  const lastUserInputRef = useRef<number | null>(null);
+  const lastEditedBlockRef = useRef<Element | null>(null);
+  const hasInsertedTimestampRef = useRef(false);
+  const styleId = `note-editor-timestamps-${useId()}`;
 
-  const ensureTimestampsForNewBlocks = useCallback(() => {
+  const insertTimestampHrIfNeeded = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
-    const now = new Date().toISOString();
-    for (const block of getBlockElements(el)) {
-      const existing = block.getAttribute(TIMESTAMP_ATTR);
-      if (existing) {
-        if (!knownBlocksRef.current.has(block)) {
-          block.setAttribute(TIMESTAMP_ATTR, now);
-        }
-        knownBlocksRef.current.add(block);
-        continue;
+    
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    
+    // Find the block element containing the cursor
+    let container = range.startContainer;
+    if (container.nodeType === Node.TEXT_NODE) {
+      container = container.parentNode as Node;
+    }
+    
+    // Find the closest block-level element (p or div)
+    let currentBlock: Element | null = null;
+    let current: Node | null = container;
+    while (current && current !== el) {
+      if (current instanceof Element && 
+          (current.tagName === 'P' || current.tagName === 'DIV')) {
+        currentBlock = current;
+        break;
       }
-      if (knownBlocksRef.current.has(block)) {
-        continue;
+      current = current.parentNode;
+    }
+    
+    // If we're in a different block than last time (or first edit)
+    if (currentBlock && currentBlock !== lastEditedBlockRef.current) {
+      const now = Date.now();
+      const lastEdit = getLastEditTimestamp(el);
+      
+      // Check if we need to insert a timestamp (>10min since last edit, or first edit)
+      if (!hasInsertedTimestampRef.current && 
+          (lastEdit === null || now - lastEdit > ADDITION_WINDOW_MS)) {
+        const timestamp = new Date(now).toISOString();
+        const hr = createTimestampHr(timestamp);
+        
+        // Insert before the current block element
+        currentBlock.parentNode?.insertBefore(hr, currentBlock);
+        
+        lastUserInputRef.current = now;
+        hasInsertedTimestampRef.current = true;
       }
-      block.setAttribute(TIMESTAMP_ATTR, now);
-      knownBlocksRef.current.add(block);
+      
+      lastEditedBlockRef.current = currentBlock;
     }
   }, []);
 
-  const updateAdditionStyles = useCallback((element?: HTMLElement) => {
+  const updateTimestampStyles = useCallback((element?: HTMLElement) => {
     const el = element ?? editorRef.current;
     if (!el) return;
-    const blocks = getBlockElements(el);
-    const entries: Array<{
-      element: HTMLElement;
-      timestamp: number;
-      raw: string;
-      order: number;
-    }> = [];
-    blocks.forEach((block, index) => {
-      if (isEmptyBlock(block)) return;
-      const raw = block.getAttribute(TIMESTAMP_ATTR);
-      if (!raw) return;
-      const timestamp = Date.parse(raw);
-      if (Number.isNaN(timestamp)) return;
-      entries.push({
-        element: block,
-        timestamp,
-        raw,
-        order: index
-      });
-    });
-    entries.sort((a, b) => (a.timestamp - b.timestamp) || (a.order - b.order));
-    let lastTimestamp: number | null = null;
-    const markers: Array<{ selector: string; label: string }> = [];
-    for (const entry of entries) {
-      if (lastTimestamp === null || entry.timestamp - lastTimestamp > ADDITION_WINDOW_MS) {
-        const selector = buildSelectorPath(entry.element, el);
-        const label = formatAdditionLabel(entry.raw);
-        if (selector && label) {
-          markers.push({ selector, label });
-        }
-      }
-      lastTimestamp = entry.timestamp;
-    }
+    
+    const hrs = Array.from(el.querySelectorAll<HTMLHRElement>(`hr[${TIMESTAMP_ATTR}]`));
+    
     let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
     if (!styleEl) {
       styleEl = document.createElement('style');
       styleEl.id = styleId;
       document.head.appendChild(styleEl);
     }
-    if (markers.length === 0) {
+    
+    if (hrs.length === 0) {
       styleEl.textContent = '';
       return;
     }
-    const beforeSelectors = markers.map((marker) => `${marker.selector}::before`).join(', ');
-    const afterSelectors = markers.map((marker) => `${marker.selector}::after`).join(', ');
-    const tooltipRules = markers.map((marker) => (
-      `${marker.selector}::after { content: "${escapeCssContent(marker.label)}"; }`
-    ));
-    styleEl.textContent = `${beforeSelectors}, ${afterSelectors} { display: block; }` +
-      tooltipRules.join('');
+    
+    const rules: string[] = [];
+    for (const hr of hrs) {
+      const timestamp = hr.getAttribute(TIMESTAMP_ATTR);
+      if (!timestamp) continue;
+      
+      const label = formatTimestampLabel(timestamp);
+      if (!label) continue;
+      
+      const escapedTimestamp = timestamp.replace(/"/g, '\\"').replace(/:/g, '\\:');
+      rules.push(`hr[data-timestamp="${escapedTimestamp}"]::before { content: "${escapeCssContent(label)}"; }`);
+    }
+    
+    styleEl.textContent = rules.join('\n');
   }, [styleId]);
 
   const updateEmptyState = useCallback(() => {
@@ -267,92 +267,59 @@ export function useContentEditableEditor({
       return;
     }
     if (content === lastContentRef.current) {
-      updateAdditionStyles(el);
       updateEmptyState();
+      updateTimestampStyles(el);
       return;
     }
     const nextContent = content || '';
     if (nextContent === el.innerHTML) {
       lastContentRef.current = nextContent;
-      updateAdditionStyles(el);
       updateEmptyState();
+      updateTimestampStyles(el);
       return;
     }
     el.innerHTML = nextContent;
     lastContentRef.current = nextContent;
-    knownBlocksRef.current = new WeakSet();
-    for (const block of getBlockElements(el)) {
-      knownBlocksRef.current.add(block);
-    }
-    updateAdditionStyles(el);
     updateEmptyState();
-  }, [content, updateAdditionStyles, updateEmptyState]);
+    updateTimestampStyles(el);
+  }, [content, updateEmptyState, updateTimestampStyles]);
 
   const handleInput = useCallback(() => {
     if (!isEditableRef.current) return;
     const el = editorRef.current;
     if (!el) return;
-    ensureTimestampsForNewBlocks();
+    
+    // Check if we should insert a timestamp for this edit
+    insertTimestampHrIfNeeded();
+    
+    // Track last user input time
+    const now = Date.now();
+    if (lastUserInputRef.current && now - lastUserInputRef.current > ADDITION_WINDOW_MS) {
+      // More than 10 minutes passed, allow inserting timestamp on next block change
+      hasInsertedTimestampRef.current = false;
+    }
+    lastUserInputRef.current = now;
+    
     updateEmptyState();
-
-    // Convert --- to <hr>
-    const hrPattern = /^---$/;
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    const textNodesToReplace: Text[] = [];
-    let node;
-    while ((node = walker.nextNode())) {
-      const text = (node.textContent ?? '').trim();
-      if (hrPattern.test(text)) {
-        textNodesToReplace.push(node as Text);
-      }
-    }
-    for (const textNode of textNodesToReplace) {
-      const hr = document.createElement('hr');
-      const br = document.createElement('br');
-      const parent = textNode.parentNode;
-      if (parent) {
-        parent.replaceChild(hr, textNode);
-        hr.after(br);
-      }
-    }
 
     // Linkify any URLs in text nodes
     const cursorPos = saveCursorPosition(el);
     const didLinkify = linkifyElement(el);
-    const didInsertHr = textNodesToReplace.length > 0;
-    if (didLinkify || didInsertHr) {
+    if (didLinkify) {
       // After transformation, cursor may be lost - place it after the new element
       const selection = window.getSelection();
       if (selection) {
-        if (didInsertHr) {
-          // Place cursor after the <br> following the last <hr>
-          const hrs = el.querySelectorAll('hr');
-          if (hrs.length > 0) {
-            const lastHr = hrs[hrs.length - 1];
-            const nextSibling = lastHr.nextSibling;
-            const range = document.createRange();
-            if (nextSibling) {
-              range.setStartAfter(nextSibling);
-            } else {
-              range.setStartAfter(lastHr);
-            }
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          }
-        } else if (didLinkify) {
-          // Find the last anchor and place cursor after it
-          const anchors = el.querySelectorAll('a');
-          if (anchors.length > 0) {
-            const lastAnchor = anchors[anchors.length - 1];
-            const range = document.createRange();
-            range.setStartAfter(lastAnchor);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          } else {
-            restoreCursorPosition(el, cursorPos);
-          }
+        // Find the last anchor and place cursor after it
+        const anchors = el.querySelectorAll('a');
+        if (anchors.length > 0) {
+          const lastAnchor = anchors[anchors.length - 1];
+          const range = document.createRange();
+          range.setStartAfter(lastAnchor);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        } else {
+          restoreCursorPosition(el, cursorPos);
         }
       }
     }
@@ -365,9 +332,10 @@ export function useContentEditableEditor({
     }
     lastContentRef.current = html;
     isLocalEditRef.current = true;
+    updateTimestampStyles(el);
     onChangeRef.current(html);
     onUserInputRef.current?.();
-  }, [ensureTimestampsForNewBlocks, updateEmptyState]);
+  }, [insertTimestampHrIfNeeded, updateEmptyState, updateTimestampStyles]);
 
   useEffect(() => {
     return () => {

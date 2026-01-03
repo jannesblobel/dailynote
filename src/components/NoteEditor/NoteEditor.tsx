@@ -58,7 +58,6 @@ export function NoteEditor({
     handleClick
   } = useContentEditableEditor({
     content,
-    noteDate: date,
     isEditable,
     placeholderText,
     onChange,

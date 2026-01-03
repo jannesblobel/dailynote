@@ -581,65 +581,38 @@
   margin-bottom: 0;
 }
 
-.note-editor__content p[data-timestamp],
-.note-editor__content div[data-timestamp] {
+.note-editor__content hr[data-timestamp] {
   position: relative;
-}
-
-.note-editor__content p[data-timestamp]::before,
-.note-editor__content div[data-timestamp]::before,
-.note-editor__content p[data-timestamp]::after,
-.note-editor__content div[data-timestamp]::after {
-  display: none;
-  position: absolute;
-  left: calc(-1 * var(--spacing-2xl) + 2px);
-  top: var(--spacing-sm);
-}
-
-.note-editor__content p[data-timestamp]::before,
-.note-editor__content div[data-timestamp]::before {
-  content: "";
-  width: 4px;
-  height: 14px;
-  border-radius: 999px;
-  background-color: var(--color-note-indicator);
-}
-
-.note-editor__content p[data-timestamp]::after,
-.note-editor__content div[data-timestamp]::after {
-  left: calc(-1 * var(--spacing-2xl) + 2px);
-  top: 0;
-  transform: translateY(-100%);
-  padding: 2px 6px;
-  border-radius: 6px;
-  background-color: var(--color-bg);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
-  font-size: var(--font-size-xs);
-  color: var(--color-text);
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
-}
-
-.note-editor__content p[data-timestamp]:hover::after,
-.note-editor__content p[data-timestamp]:focus::after,
-.note-editor__content div[data-timestamp]:hover::after,
-.note-editor__content div[data-timestamp]:focus::after {
-  opacity: 1;
-}
-
-.note-editor__content br {
-  display: block;
-  content: "";
-  margin: var(--spacing-xs) 0;
+  margin: var(--spacing-lg) 0;
+  border: none;
+  height: 1px;
+  background: var(--color-border);
 }
 
 .note-editor__content hr {
   border: none;
   border-top: 1px solid var(--color-border);
   margin: var(--spacing-md) 0;
+}
+
+.note-editor__content hr[data-timestamp] {
+  overflow: visible;
+  position: relative;
+  margin: var(--spacing-lg) calc(-1 * var(--spacing-xl));
+}
+
+.note-editor__content hr[data-timestamp]::before {
+  position: absolute;
+  right: 0;
+  top: -14px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-weight: 500;
 }
 
 @keyframes note-status-fade-in {
