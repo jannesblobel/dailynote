@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import type { ClipboardEvent, DragEvent, KeyboardEvent, MouseEvent } from 'react';
+import type { ClipboardEvent, DragEvent, MouseEvent } from 'react';
 import { linkifyElement } from '../../utils/linkify';
 
 interface ContentEditableOptions {
@@ -100,30 +100,12 @@ export function useContentEditableEditor({
 }: ContentEditableOptions) {
   const editorRef = useRef<HTMLDivElement>(null);
   const lastContentRef = useRef('');
-  const lastSignatureRef = useRef('');
   const isLocalEditRef = useRef(false);
   const isEditableRef = useRef(isEditable);
   const onChangeRef = useRef(onChange);
   const onUserInputRef = useRef(onUserInput);
   const onImageDropRef = useRef(onImageDrop);
   const onDropCompleteRef = useRef(onDropComplete);
-
-  const getContentSignature = useCallback((html: string) => {
-    const container = document.createElement('div');
-    container.innerHTML = html;
-    const text = (container.textContent ?? '')
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      .replace(/\u00a0/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const images = Array.from(container.querySelectorAll('img[data-image-id]'))
-      .map((img) => img.getAttribute('data-image-id') ?? '')
-      .filter(Boolean);
-    const links = Array.from(container.querySelectorAll('a[href]'))
-      .map((anchor) => anchor.getAttribute('href') ?? '')
-      .filter(Boolean);
-    return JSON.stringify({ text, images, links });
-  }, []);
 
   const updateEmptyState = useCallback(() => {
     const el = editorRef.current;
@@ -158,7 +140,6 @@ export function useContentEditableEditor({
     if (isLocalEditRef.current) {
       isLocalEditRef.current = false;
       lastContentRef.current = content || '';
-      lastSignatureRef.current = getContentSignature(content || '');
       updateEmptyState();
       return;
     }
@@ -166,21 +147,16 @@ export function useContentEditableEditor({
       updateEmptyState();
       return;
     }
-    // Compare signatures to handle HTML normalization differences
-    // Skip if DOM already has semantically equivalent content
-    const newSignature = getContentSignature(content || '');
-    const currentSignature = getContentSignature(el.innerHTML);
-    if (newSignature === currentSignature) {
-      lastContentRef.current = content || '';
-      lastSignatureRef.current = newSignature;
+    const nextContent = content || '';
+    if (nextContent === el.innerHTML) {
+      lastContentRef.current = nextContent;
       updateEmptyState();
       return;
     }
-    el.innerHTML = content || '';
-    lastContentRef.current = content || '';
-    lastSignatureRef.current = newSignature;
+    el.innerHTML = nextContent;
+    lastContentRef.current = nextContent;
     updateEmptyState();
-  }, [content, getContentSignature, updateEmptyState]);
+  }, [content, updateEmptyState]);
 
   const handleInput = useCallback(() => {
     if (!isEditableRef.current) return;
@@ -253,17 +229,14 @@ export function useContentEditableEditor({
     const hasText = (el.textContent ?? '').trim().length > 0;
     const hasImages = el.querySelector('img') !== null;
     const html = hasText || hasImages ? el.innerHTML : '';
-    const signature = getContentSignature(html);
-    if (signature === lastSignatureRef.current) {
-      lastContentRef.current = html;
+    if (html === lastContentRef.current) {
       return;
     }
-    lastSignatureRef.current = signature;
     lastContentRef.current = html;
     isLocalEditRef.current = true;
     onChangeRef.current(html);
     onUserInputRef.current?.();
-  }, [getContentSignature, updateEmptyState]);
+  }, [updateEmptyState]);
 
   const handlePaste = useCallback((event: ClipboardEvent<HTMLDivElement>) => {
     if (!isEditableRef.current) return;
@@ -356,27 +329,12 @@ export function useContentEditableEditor({
     }
   }, []);
 
-  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (!isEditableRef.current) return;
-
-    // Cmd+Shift+X (Mac) or Ctrl+Shift+X (Windows/Linux) for strikethrough
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const modifierKey = isMac ? event.metaKey : event.ctrlKey;
-
-    if (modifierKey && event.shiftKey && event.key.toLowerCase() === 'x') {
-      event.preventDefault();
-      document.execCommand('strikeThrough', false);
-      handleInput();
-    }
-  }, [handleInput]);
-
   return {
     editorRef,
     handleInput,
     handlePaste,
     handleDrop,
     handleDragOver,
-    handleClick,
-    handleKeyDown
+    handleClick
   };
 }

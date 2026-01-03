@@ -56,8 +56,7 @@ export function NoteEditor({
     handlePaste,
     handleDrop,
     handleDragOver,
-    handleClick,
-    handleKeyDown
+    handleClick
   } = useContentEditableEditor({
     content,
     isEditable,
@@ -138,7 +137,6 @@ export function NoteEditor({
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onClick={handleClick}
-      onKeyDown={handleKeyDown}
       isDraggingImage={isDraggingImage}
     />
   );
