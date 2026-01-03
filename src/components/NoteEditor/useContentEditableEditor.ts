@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useId, useRef } from 'react';
 import type { ClipboardEvent, DragEvent, MouseEvent } from 'react';
 import { linkifyElement } from '../../utils/linkify';
 
+const TIMESTAMP_ATTR = 'data-timestamp';
+const ADDITION_WINDOW_MS = 10 * 60 * 1000;
+
 interface ContentEditableOptions {
   content: string;
+  noteDate: string;
   isEditable: boolean;
   placeholderText: string;
   onChange: (content: string) => void;
@@ -89,6 +93,47 @@ function restoreCursorPosition(
   }
 }
 
+function getBlockElements(element: HTMLElement): HTMLElement[] {
+  return Array.from(element.querySelectorAll<HTMLElement>('p, div'));
+}
+
+function isEmptyBlock(element: HTMLElement): boolean {
+  if (element.tagName !== 'P' && element.tagName !== 'DIV') return false;
+  const text = (element.textContent ?? '').trim();
+  if (text.length > 0) return false;
+  return element.querySelector('img') === null;
+}
+
+function buildSelectorPath(element: Element, root: Element): string | null {
+  const segments: string[] = [];
+  let current: Element | null = element;
+  while (current && current !== root) {
+    const parent: Element | null = current.parentElement;
+    if (!parent) return null;
+    const siblings = Array.from(parent.children);
+    const index = siblings.indexOf(current);
+    if (index < 0) return null;
+    segments.push(`${current.tagName.toLowerCase()}:nth-child(${index + 1})`);
+    current = parent;
+  }
+  if (current !== root) return null;
+  return `.note-editor__content > ${segments.reverse().join(' > ')}`;
+}
+
+function formatAdditionLabel(timestamp: string): string | null {
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const time = parsed.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+  return time;
+}
+
+function escapeCssContent(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\A ');
+}
+
 export function useContentEditableEditor({
   content,
   isEditable,
@@ -106,6 +151,84 @@ export function useContentEditableEditor({
   const onUserInputRef = useRef(onUserInput);
   const onImageDropRef = useRef(onImageDrop);
   const onDropCompleteRef = useRef(onDropComplete);
+  const knownBlocksRef = useRef<WeakSet<Element>>(new WeakSet());
+  const styleId = `note-editor-additions-${useId()}`;
+
+  const ensureTimestampsForNewBlocks = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    const now = new Date().toISOString();
+    for (const block of getBlockElements(el)) {
+      const existing = block.getAttribute(TIMESTAMP_ATTR);
+      if (existing) {
+        if (!knownBlocksRef.current.has(block)) {
+          block.setAttribute(TIMESTAMP_ATTR, now);
+        }
+        knownBlocksRef.current.add(block);
+        continue;
+      }
+      if (knownBlocksRef.current.has(block)) {
+        continue;
+      }
+      block.setAttribute(TIMESTAMP_ATTR, now);
+      knownBlocksRef.current.add(block);
+    }
+  }, []);
+
+  const updateAdditionStyles = useCallback((element?: HTMLElement) => {
+    const el = element ?? editorRef.current;
+    if (!el) return;
+    const blocks = getBlockElements(el);
+    const entries: Array<{
+      element: HTMLElement;
+      timestamp: number;
+      raw: string;
+      order: number;
+    }> = [];
+    blocks.forEach((block, index) => {
+      if (isEmptyBlock(block)) return;
+      const raw = block.getAttribute(TIMESTAMP_ATTR);
+      if (!raw) return;
+      const timestamp = Date.parse(raw);
+      if (Number.isNaN(timestamp)) return;
+      entries.push({
+        element: block,
+        timestamp,
+        raw,
+        order: index
+      });
+    });
+    entries.sort((a, b) => (a.timestamp - b.timestamp) || (a.order - b.order));
+    let lastTimestamp: number | null = null;
+    const markers: Array<{ selector: string; label: string }> = [];
+    for (const entry of entries) {
+      if (lastTimestamp === null || entry.timestamp - lastTimestamp > ADDITION_WINDOW_MS) {
+        const selector = buildSelectorPath(entry.element, el);
+        const label = formatAdditionLabel(entry.raw);
+        if (selector && label) {
+          markers.push({ selector, label });
+        }
+      }
+      lastTimestamp = entry.timestamp;
+    }
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+    if (markers.length === 0) {
+      styleEl.textContent = '';
+      return;
+    }
+    const beforeSelectors = markers.map((marker) => `${marker.selector}::before`).join(', ');
+    const afterSelectors = markers.map((marker) => `${marker.selector}::after`).join(', ');
+    const tooltipRules = markers.map((marker) => (
+      `${marker.selector}::after { content: "${escapeCssContent(marker.label)}"; }`
+    ));
+    styleEl.textContent = `${beforeSelectors}, ${afterSelectors} { display: block; }` +
+      tooltipRules.join('');
+  }, [styleId]);
 
   const updateEmptyState = useCallback(() => {
     const el = editorRef.current;
@@ -144,24 +267,32 @@ export function useContentEditableEditor({
       return;
     }
     if (content === lastContentRef.current) {
+      updateAdditionStyles(el);
       updateEmptyState();
       return;
     }
     const nextContent = content || '';
     if (nextContent === el.innerHTML) {
       lastContentRef.current = nextContent;
+      updateAdditionStyles(el);
       updateEmptyState();
       return;
     }
     el.innerHTML = nextContent;
     lastContentRef.current = nextContent;
+    knownBlocksRef.current = new WeakSet();
+    for (const block of getBlockElements(el)) {
+      knownBlocksRef.current.add(block);
+    }
+    updateAdditionStyles(el);
     updateEmptyState();
-  }, [content, updateEmptyState]);
+  }, [content, updateAdditionStyles, updateEmptyState]);
 
   const handleInput = useCallback(() => {
     if (!isEditableRef.current) return;
     const el = editorRef.current;
     if (!el) return;
+    ensureTimestampsForNewBlocks();
     updateEmptyState();
 
     // Convert --- to <hr>
@@ -236,7 +367,13 @@ export function useContentEditableEditor({
     isLocalEditRef.current = true;
     onChangeRef.current(html);
     onUserInputRef.current?.();
-  }, [updateEmptyState]);
+  }, [ensureTimestampsForNewBlocks, updateEmptyState]);
+
+  useEffect(() => {
+    return () => {
+      document.getElementById(styleId)?.remove();
+    };
+  }, [styleId]);
 
   const handlePaste = useCallback((event: ClipboardEvent<HTMLDivElement>) => {
     if (!isEditableRef.current) return;
