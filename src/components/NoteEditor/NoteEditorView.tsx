@@ -50,6 +50,7 @@ export function NoteEditorView({
           className={`note-editor__content${!isEditable ? ' note-editor__content--readonly' : ''}`}
           data-placeholder={placeholderText}
           contentEditable={isEditable}
+          tabIndex={isEditable ? 0 : -1}
           suppressContentEditableWarning={true}
           role="textbox"
           aria-multiline="true"

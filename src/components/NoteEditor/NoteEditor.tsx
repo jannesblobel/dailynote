@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { formatDateDisplay } from '../../utils/date';
 import { canEditNote } from '../../utils/noteRules';
 import { NoteEditorView } from './NoteEditorView';
@@ -63,6 +64,53 @@ export function NoteEditor({
     onImageDrop,
     onDropComplete: endImageDrag
   });
+
+  const lastFocusedDateRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isEditable) {
+      lastFocusedDateRef.current = null;
+    }
+  }, [isEditable]);
+
+  useEffect(() => {
+    if (!isEditable) return;
+    if (lastFocusedDateRef.current === date) return;
+    const focusEditor = () => {
+      const el = editorRef.current;
+      if (!el) return;
+      if (document.activeElement === el) {
+        lastFocusedDateRef.current = date;
+        return;
+      }
+      if (typeof el.focus === 'function') {
+        el.focus({ preventScroll: true });
+      }
+      if (document.activeElement === el) {
+        const selection = window.getSelection();
+        if (selection) {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+      if (document.activeElement === el) {
+        lastFocusedDateRef.current = date;
+      }
+    };
+    const frame = requestAnimationFrame(() => {
+      focusEditor();
+    });
+    const retryTimer = window.setTimeout(() => {
+      focusEditor();
+    }, 120);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(retryTimer);
+    };
+  }, [date, isEditable, editorRef]);
 
   useInlineImageUrls({
     date,
