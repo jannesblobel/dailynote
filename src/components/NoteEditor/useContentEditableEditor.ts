@@ -170,24 +170,54 @@ export function useContentEditableEditor({
     if (!el) return;
     updateEmptyState();
 
+    // Convert --- to <hr>
+    const hrPattern = /^---$/;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const textNodesToReplace: Text[] = [];
+    let node;
+    while ((node = walker.nextNode())) {
+      const text = (node.textContent ?? '').trim();
+      if (hrPattern.test(text)) {
+        textNodesToReplace.push(node as Text);
+      }
+    }
+    for (const textNode of textNodesToReplace) {
+      const hr = document.createElement('hr');
+      textNode.parentNode?.replaceChild(hr, textNode);
+    }
+
     // Linkify any URLs in text nodes
     const cursorPos = saveCursorPosition(el);
     const didLinkify = linkifyElement(el);
-    if (didLinkify) {
-      // After linkification, cursor may be lost - try to place it after the new link
+    const didInsertHr = textNodesToReplace.length > 0;
+    if (didLinkify || didInsertHr) {
+      // After transformation, cursor may be lost - place it after the new element
       const selection = window.getSelection();
       if (selection) {
-        // Find the last anchor and place cursor after it
-        const anchors = el.querySelectorAll('a');
-        if (anchors.length > 0) {
-          const lastAnchor = anchors[anchors.length - 1];
-          const range = document.createRange();
-          range.setStartAfter(lastAnchor);
-          range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        } else {
-          restoreCursorPosition(el, cursorPos);
+        if (didInsertHr) {
+          // Place cursor after the last <hr>
+          const hrs = el.querySelectorAll('hr');
+          if (hrs.length > 0) {
+            const lastHr = hrs[hrs.length - 1];
+            const range = document.createRange();
+            range.setStartAfter(lastHr);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        } else if (didLinkify) {
+          // Find the last anchor and place cursor after it
+          const anchors = el.querySelectorAll('a');
+          if (anchors.length > 0) {
+            const lastAnchor = anchors[anchors.length - 1];
+            const range = document.createRange();
+            range.setStartAfter(lastAnchor);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } else {
+            restoreCursorPosition(el, cursorPos);
+          }
         }
       }
     }
