@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { useNoteRepositoryContext } from '../../contexts/noteRepositoryContext';
 import { compressImage } from '../../utils/imageCompression';
-import { revokeImageUrls } from '../../utils/imageResolver';
+import { ImageUrlManager } from '../../utils/imageUrlManager';
 
 interface UseInlineImageUploadOptions {
   date: string;
@@ -60,12 +60,12 @@ export function useInlineImageUrls({
   editorRef
 }: UseInlineImageUrlsOptions) {
   const { imageRepository } = useNoteRepositoryContext();
-  const resolvedIdsRef = useRef<Set<string>>(new Set());
-  const inFlightIdsRef = useRef<Set<string>>(new Set());
-  const urlCacheRef = useRef<Map<string, string>>(new Map());
   const metaCacheRef = useRef<Map<string, { width: number; height: number }>>(new Map());
   const dateRef = useRef<string | null>(null);
   const repoRef = useRef<typeof imageRepository>(null);
+  const managerRef = useRef<ImageUrlManager | null>(null);
+  const ownerIdRef = useRef(`note-editor-${Math.random().toString(36).slice(2)}`);
+  const currentIdsRef = useRef<Set<string>>(new Set());
   const [metaVersion, setMetaVersion] = useState(0);
 
   useEffect(() => {
@@ -74,10 +74,8 @@ export function useInlineImageUrls({
 
     dateRef.current = date;
     repoRef.current = imageRepository;
-    resolvedIdsRef.current = new Set();
-    inFlightIdsRef.current = new Set();
-    urlCacheRef.current = new Map();
     metaCacheRef.current = new Map();
+    currentIdsRef.current = new Set();
 
     const loadMeta = async () => {
       try {
@@ -100,32 +98,42 @@ export function useInlineImageUrls({
   }, [date, imageRepository]);
 
   useEffect(() => {
-    const contentEl = editorRef.current;
+    if (!imageRepository) return;
+    const manager = new ImageUrlManager(imageRepository);
+    const ownerId = ownerIdRef.current;
+    managerRef.current = manager;
     return () => {
-      if (contentEl) {
-        revokeImageUrls(contentEl);
-        // Clear caches when revoking URLs to prevent using stale blob URLs
-        urlCacheRef.current.clear();
-        resolvedIdsRef.current.clear();
-      }
+      manager.releaseOwner(ownerId);
+      managerRef.current = null;
+      currentIdsRef.current = new Set();
     };
-  }, [date, editorRef, imageRepository]);
+  }, [imageRepository]);
 
   useEffect(() => {
-    if (!editorRef.current || !imageRepository) {
+    const contentEl = editorRef.current;
+    const manager = managerRef.current;
+    if (!contentEl || !manager) {
       return;
     }
 
-    const images = editorRef.current.querySelectorAll('img[data-image-id]');
+    const images = contentEl.querySelectorAll('img[data-image-id]');
     if (!images.length) {
+      currentIdsRef.current.forEach((imageId) => {
+        manager.releaseImage(imageId, ownerIdRef.current);
+      });
+      currentIdsRef.current = new Set();
       return;
     }
+
+    const nextIds = new Set<string>();
 
     images.forEach((img) => {
       const imageId = img.getAttribute('data-image-id');
       if (!imageId || imageId === 'uploading') {
         return;
       }
+
+      nextIds.add(imageId);
 
       if (!img.getAttribute('width') || !img.getAttribute('height')) {
         const meta = metaCacheRef.current.get(imageId);
@@ -135,32 +143,16 @@ export function useInlineImageUrls({
         }
       }
 
-      if (resolvedIdsRef.current.has(imageId)) {
-        const cachedUrl = urlCacheRef.current.get(imageId);
-        if (cachedUrl && img.getAttribute('src') !== cachedUrl) {
-          img.setAttribute('src', cachedUrl);
-        }
-        return;
-      }
-      if (inFlightIdsRef.current.has(imageId)) {
-        return;
-      }
-
       img.setAttribute('data-image-loading', 'true');
-      inFlightIdsRef.current.add(imageId);
 
-      imageRepository.getUrl(imageId)
+      manager.acquireUrl(imageId, ownerIdRef.current)
         .then((url) => {
           if (!url) {
             return;
           }
-          urlCacheRef.current.set(imageId, url);
-          resolvedIdsRef.current.add(imageId);
 
-          // Query for the image again to ensure we're updating the current DOM node
-          // (ProseMirror may have re-rendered since we captured the element)
           const currentImg = editorRef.current?.querySelector(`img[data-image-id="${imageId}"]`);
-          if (currentImg) {
+          if (currentImg && currentImg.getAttribute('src') !== url) {
             currentImg.setAttribute('src', url);
           }
         })
@@ -172,12 +164,18 @@ export function useInlineImageUrls({
           }
         })
         .finally(() => {
-          inFlightIdsRef.current.delete(imageId);
           const currentImg = editorRef.current?.querySelector(`img[data-image-id="${imageId}"]`);
           if (currentImg) {
             currentImg.removeAttribute('data-image-loading');
           }
         });
     });
-  }, [content, imageRepository, editorRef, metaVersion]);
+
+    currentIdsRef.current.forEach((imageId) => {
+      if (!nextIds.has(imageId)) {
+        manager.releaseImage(imageId, ownerIdRef.current);
+      }
+    });
+    currentIdsRef.current = nextIds;
+  }, [content, editorRef, imageRepository, metaVersion]);
 }

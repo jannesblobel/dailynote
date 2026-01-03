@@ -86,7 +86,6 @@ function generateUuid(): string {
 export function createUnifiedImageRepository(
   keyring: KeyringProvider
 ): ImageRepository {
-  const blobUrlCache = new Map<string, string>();
   const imageKeyCache = new Map<string, Promise<CryptoKey>>();
 
   const getImageKey = async (keyId: string) => {
@@ -165,29 +164,12 @@ export function createUnifiedImageRepository(
       }
     },
 
-    async getUrl(imageId: string): Promise<string | null> {
-      if (blobUrlCache.has(imageId)) {
-        return blobUrlCache.get(imageId)!;
-      }
-
-      try {
-        const blob = await this.get(imageId);
-        if (!blob) return null;
-        const url = URL.createObjectURL(blob);
-        blobUrlCache.set(imageId, url);
-        return url;
-      } catch {
-        return null;
-      }
+    async getUrl(_imageId: string): Promise<string | null> {
+      void _imageId;
+      return null;
     },
 
     async delete(imageId: string): Promise<void> {
-      const cachedUrl = blobUrlCache.get(imageId);
-      if (cachedUrl) {
-        URL.revokeObjectURL(cachedUrl);
-        blobUrlCache.delete(imageId);
-      }
-
       const meta = await getImageMeta(imageId);
       if (meta) {
         await setImageMeta({
@@ -220,13 +202,6 @@ export function createUnifiedImageRepository(
 
     async deleteByNoteDate(noteDate: string): Promise<void> {
       const metas = await getMetaByDate(noteDate);
-      metas.forEach((meta) => {
-        const cachedUrl = blobUrlCache.get(meta.id);
-        if (cachedUrl) {
-          URL.revokeObjectURL(cachedUrl);
-          blobUrlCache.delete(meta.id);
-        }
-      });
 
       if (!metas.length) {
         await deleteImagesByDate(noteDate);

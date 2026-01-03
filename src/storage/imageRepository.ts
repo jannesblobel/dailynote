@@ -30,8 +30,8 @@ export interface ImageRepository {
   get(imageId: string): Promise<Blob | null>;
 
   /**
-   * Get URL for rendering the image
-   * Returns blob URL for local mode, Supabase signed URL for cloud mode
+   * Get a remote URL for rendering the image if supported
+   * Returns signed URL for cloud-backed repositories, otherwise null
    * @param imageId - UUID of the image
    * @returns URL string or null if not found
    */

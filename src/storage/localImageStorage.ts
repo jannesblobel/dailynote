@@ -221,9 +221,6 @@ async function deleteImagesByDate(noteDate: string): Promise<void> {
   await Promise.all(images.map(img => deleteImage(img.id)));
 }
 
-// Blob URL cache to avoid creating multiple URLs for same image
-const blobUrlCache = new Map<string, string>();
-
 /**
  * Create encrypted image repository using IndexedDB
  * Images are encrypted with the vault key before storage
@@ -279,39 +276,12 @@ export function createEncryptedImageRepository(vaultKey: CryptoKey): ImageReposi
       }
     },
 
-    async getUrl(imageId: string): Promise<string | null> {
-      // Check cache first
-      if (blobUrlCache.has(imageId)) {
-        return blobUrlCache.get(imageId)!;
-      }
-
-      try {
-        const blob = await this.get(imageId);
-
-        if (!blob) {
-          return null;
-        }
-
-        // Create blob URL
-        const url = URL.createObjectURL(blob);
-
-        // Cache it
-        blobUrlCache.set(imageId, url);
-
-        return url;
-      } catch {
-        return null;
-      }
+    async getUrl(_imageId: string): Promise<string | null> {
+      void _imageId;
+      return null;
     },
 
     async delete(imageId: string): Promise<void> {
-      // Revoke blob URL if cached
-      const cachedUrl = blobUrlCache.get(imageId);
-      if (cachedUrl) {
-        URL.revokeObjectURL(cachedUrl);
-        blobUrlCache.delete(imageId);
-      }
-
       await deleteImage(imageId);
     },
 
@@ -320,16 +290,6 @@ export function createEncryptedImageRepository(vaultKey: CryptoKey): ImageReposi
     },
 
     async deleteByNoteDate(noteDate: string): Promise<void> {
-      // Revoke all cached URLs for this note
-      const images = await getImageMetaByDate(noteDate);
-      images.forEach(img => {
-        const cachedUrl = blobUrlCache.get(img.id);
-        if (cachedUrl) {
-          URL.revokeObjectURL(cachedUrl);
-          blobUrlCache.delete(img.id);
-        }
-      });
-
       await deleteImagesByDate(noteDate);
     }
   };

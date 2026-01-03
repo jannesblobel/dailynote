@@ -198,10 +198,8 @@ export function createUnifiedSyncedImageRepository(
       return hydrated ? await localRepo.get(imageId) : null;
     },
     async getUrl(imageId: string): Promise<string | null> {
-      const localUrl = await localRepo.getUrl(imageId);
-      if (localUrl) return localUrl;
-      const hydrated = await ensureLocalImage(supabase, userId, keyring, imageId);
-      return hydrated ? await localRepo.getUrl(imageId) : null;
+      void imageId;
+      return null;
     },
     async getByNoteDate(noteDate: string): Promise<NoteImage[]> {
       const local = await localRepo.getByNoteDate(noteDate);
