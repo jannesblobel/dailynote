@@ -316,9 +316,11 @@ export function useContentEditableEditor({
     for (const textNode of textNodesToReplace) {
       const timestamp = new Date().toISOString();
       const hr = createTimestampHr(timestamp);
+      const br = document.createElement('br');
       const parent = textNode.parentNode;
       if (parent) {
         parent.replaceChild(hr, textNode);
+        hr.after(br);
       }
     }
 
