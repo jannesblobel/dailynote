@@ -168,9 +168,19 @@ export function useContentEditableEditor({
       updateEmptyState();
       return;
     }
+    // Compare signatures to handle HTML normalization differences
+    // Skip if DOM already has semantically equivalent content
+    const newSignature = getContentSignature(content || '');
+    const currentSignature = getContentSignature(el.innerHTML);
+    if (newSignature === currentSignature) {
+      lastContentRef.current = content || '';
+      lastSignatureRef.current = newSignature;
+      updateEmptyState();
+      return;
+    }
     el.innerHTML = content || '';
     lastContentRef.current = content || '';
-    lastSignatureRef.current = getContentSignature(content || '');
+    lastSignatureRef.current = newSignature;
     updateEmptyState();
   }, [content, getContentSignature, updateEmptyState]);
 
