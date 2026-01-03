@@ -1,11 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-// @ts-expect-error -- no published types for vite-plugin-sri
-import sri from 'vite-plugin-sri'
+import { sriPlugin } from './viteSriPlugin'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), sri()],
+  plugins: [react(), sriPlugin()],
   build: {
     // Optimize chunks for better caching
     rollupOptions: {

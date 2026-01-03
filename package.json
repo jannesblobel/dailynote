@@ -19,13 +19,6 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
     "dompurify": "^3.3.1",
-    "prosemirror-commands": "^1.7.1",
-    "prosemirror-history": "^1.4.1",
-    "prosemirror-inputrules": "^1.5.0",
-    "prosemirror-keymap": "^1.2.2",
-    "prosemirror-model": "^1.25.3",
-    "prosemirror-state": "^1.4.3",
-    "prosemirror-view": "^1.40.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
@@ -39,6 +32,7 @@
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "cheerio": "^1.0.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -55,5 +49,5 @@
     "vite-plugin-sri": "^0.0.2",
     "wrangler": "^4.54.0"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "yarn@4.12.0"
 }
