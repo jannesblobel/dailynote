@@ -260,9 +260,10 @@ export function useNoteContent(
   // Update content
   const setContent = useCallback((newContent: string) => {
     if (!state.isContentReady) return;
+    if (newContent === state.content) return;
 
     dispatch({ type: 'EDIT', content: newContent });
-  }, [state.isContentReady]);
+  }, [state.isContentReady, state.content]);
 
   useEffect(() => {
     if (
