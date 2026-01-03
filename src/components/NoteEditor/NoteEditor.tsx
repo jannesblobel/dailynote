@@ -31,9 +31,10 @@ export function NoteEditor({
   const formattedDate = formatDateDisplay(date);
   const { showSaving, scheduleSavingIndicator } = useSavingIndicator(isEditable);
 
+  const shouldShowSaving = isEditable && hasEdits && (showSaving || isClosing);
   const statusText = isDecrypting
     ? 'Decrypting...'
-    : isEditable && (showSaving || (isClosing && hasEdits))
+    : shouldShowSaving
       ? 'Saving...'
       : null;
   const placeholderText = !isContentReady || isDecrypting
