@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { ClipboardEvent, DragEvent } from 'react';
+import { linkifyElement } from '../../utils/linkify';
 
 interface ContentEditableOptions {
   content: string;
@@ -51,6 +52,41 @@ function insertNodeAtCursor(node: Node) {
   range.collapse(true);
   selection.removeAllRanges();
   selection.addRange(range);
+}
+
+function saveCursorPosition(element: HTMLElement): { node: Node; offset: number } | null {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  if (!element.contains(range.startContainer)) return null;
+  return { node: range.startContainer, offset: range.startOffset };
+}
+
+function restoreCursorPosition(
+  element: HTMLElement,
+  saved: { node: Node; offset: number } | null
+) {
+  if (!saved) return;
+  const selection = window.getSelection();
+  if (!selection) return;
+
+  // If the saved node is still in the document, use it
+  if (element.contains(saved.node)) {
+    try {
+      const range = document.createRange();
+      range.setStart(saved.node, Math.min(saved.offset, saved.node.textContent?.length ?? 0));
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } catch {
+      // If restoration fails, place cursor at end
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }
 }
 
 export function useContentEditableEditor({
@@ -133,6 +169,29 @@ export function useContentEditableEditor({
     const el = editorRef.current;
     if (!el) return;
     updateEmptyState();
+
+    // Linkify any URLs in text nodes
+    const cursorPos = saveCursorPosition(el);
+    const didLinkify = linkifyElement(el);
+    if (didLinkify) {
+      // After linkification, cursor may be lost - try to place it after the new link
+      const selection = window.getSelection();
+      if (selection) {
+        // Find the last anchor and place cursor after it
+        const anchors = el.querySelectorAll('a');
+        if (anchors.length > 0) {
+          const lastAnchor = anchors[anchors.length - 1];
+          const range = document.createRange();
+          range.setStartAfter(lastAnchor);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        } else {
+          restoreCursorPosition(el, cursorPos);
+        }
+      }
+    }
+
     const hasText = (el.textContent ?? '').trim().length > 0;
     const hasImages = el.querySelector('img') !== null;
     const html = hasText || hasImages ? el.innerHTML : '';
