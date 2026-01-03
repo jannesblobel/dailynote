@@ -153,7 +153,13 @@ export function useInlineImageUrls({
 
           const currentImg = editorRef.current?.querySelector(`img[data-image-id="${imageId}"]`);
           if (currentImg && currentImg.getAttribute('src') !== url) {
+            // Save scroll position before setting src to prevent iOS Safari scroll jump
+            const scrollTop = editorRef.current?.scrollTop ?? 0;
             currentImg.setAttribute('src', url);
+            // Restore scroll position immediately
+            if (editorRef.current) {
+              editorRef.current.scrollTop = scrollTop;
+            }
           }
         })
         .catch((error) => {
