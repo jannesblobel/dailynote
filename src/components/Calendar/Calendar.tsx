@@ -106,14 +106,15 @@ export function Calendar({
           target="_blank"
           rel="noreferrer"
         >
-          © katspaugh
+          <span>Built by</span> katspaugh
         </a>
         <a
-          className="calendar__footer-link"
+          className="calendar__footer-link calendar__footer-link--github"
           href={commitUrl}
           target="_blank"
           rel="noreferrer"
         >
+          <span className="calendar__footer-icon" aria-hidden="true" />
           {commitHash}
         </a>
       </div>
