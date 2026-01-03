@@ -104,6 +104,9 @@ export function useInlineImageUrls({
     return () => {
       if (contentEl) {
         revokeImageUrls(contentEl);
+        // Clear caches when revoking URLs to prevent using stale blob URLs
+        urlCacheRef.current.clear();
+        resolvedIdsRef.current.clear();
       }
     };
   }, [date, editorRef, imageRepository]);
