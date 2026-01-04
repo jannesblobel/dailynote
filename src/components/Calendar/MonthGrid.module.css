@@ -51,11 +51,27 @@
   margin-bottom: var(--spacing-xs);
 }
 
-.weekday {
+.weekdayLabel,
+.weekdayButton {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   text-align: center;
   padding: var(--spacing-xs) 0;
+  font: inherit;
+}
+
+.weekdayLabel {
+  cursor: default;
+}
+
+.weekdayButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.weekdayButton:hover {
+  color: var(--color-text);
 }
 
 .days {
@@ -68,7 +84,8 @@
   gap: 4px;
 }
 
-.monthGrid[data-month-view="true"] .weekday {
+.monthGrid[data-month-view="true"] .weekdayLabel,
+.monthGrid[data-month-view="true"] .weekdayButton {
   font-size: clamp(0.9rem, 1.8vh, 1.2rem);
 }
 
@@ -107,7 +124,8 @@
     margin-bottom: 4px;
   }
 
-  .weekday {
+  .weekdayLabel,
+  .weekdayButton {
     font-size: 0.625rem;
     padding: 2px 0;
   }
@@ -132,7 +150,8 @@
     gap: 6px;
   }
 
-  .monthGrid[data-month-view="true"] .weekday {
+  .monthGrid[data-month-view="true"] .weekdayLabel,
+  .monthGrid[data-month-view="true"] .weekdayButton {
     font-size: clamp(0.95rem, 1.5vh, 1.25rem);
   }
 }

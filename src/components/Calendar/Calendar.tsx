@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CalendarHeader } from "./CalendarHeader";
 import { CalendarGrid } from "./CalendarGrid";
 import type { SyncStatus } from "../../types";
@@ -35,8 +35,12 @@ export function Calendar({
   now,
 }: CalendarProps) {
   const hasAutoScrolledRef = useRef(false);
+  const [weekStartVersion, setWeekStartVersion] = useState(0);
   const commitHash = __COMMIT_HASH__;
   const commitUrl = `https://github.com/katspaugh/dailynote/commit/${commitHash}`;
+  const handleWeekStartChange = useCallback(() => {
+    setWeekStartVersion((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     if (hasAutoScrolledRef.current) {
@@ -86,6 +90,8 @@ export function Calendar({
         hasNote={hasNote}
         onDayClick={onDayClick}
         onMonthClick={onMonthChange}
+        weekStartVersion={weekStartVersion}
+        onWeekStartChange={handleWeekStartChange}
         now={now}
       />
     </div>

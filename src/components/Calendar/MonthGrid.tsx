@@ -4,7 +4,8 @@ import {
   getDaysInMonth,
   getFirstDayOfMonth,
   getMonthName,
-  getWeekdays,
+  getWeekdayOptions,
+  setWeekStartPreference,
   formatDate,
   getDayCellState,
 } from "../../utils/date";
@@ -18,6 +19,8 @@ interface MonthGridProps {
   onDayClick?: (date: string) => void;
   onMonthClick?: (year: number, month: number) => void;
   showMonthView?: boolean;
+  weekStartVersion?: number;
+  onWeekStartChange?: () => void;
   now?: Date;
 }
 
@@ -28,9 +31,15 @@ export function MonthGrid({
   onDayClick,
   onMonthClick,
   showMonthView = false,
+  weekStartVersion,
+  onWeekStartChange,
   now,
 }: MonthGridProps) {
-  const weekdays = getWeekdays();
+  const weekdays = useMemo(
+    () => getWeekdayOptions(),
+    [weekStartVersion],
+  );
+  const currentWeekStart = weekdays[0]?.dayIndex ?? 0;
   const monthName = getMonthName(month);
   const resolvedNow = now ?? new Date();
   const isCurrentMonth =
@@ -77,11 +86,31 @@ export function MonthGrid({
         </button>
       )}
       <div className={styles.weekdays}>
-        {weekdays.map((day) => (
-          <div key={day} className={styles.weekday}>
-            {day}
-          </div>
-        ))}
+        {weekdays.map((day) => {
+          const isSunday = day.dayIndex === 0;
+          if (!isSunday) {
+            return (
+              <div key={day.label} className={styles.weekdayLabel}>
+                {day.label}
+              </div>
+            );
+          }
+          return (
+            <button
+              key={`${day.label}-${day.dayIndex}`}
+              className={styles.weekdayButton}
+              type="button"
+              onClick={() => {
+                const nextStart = currentWeekStart === 0 ? 1 : 0;
+                setWeekStartPreference(nextStart);
+                onWeekStartChange?.();
+              }}
+              aria-label={`Set week start to ${currentWeekStart === 0 ? "Monday" : "Sunday"}`}
+            >
+              {day.label}
+            </button>
+          );
+        })}
       </div>
       <div className={styles.days}>
         {days.map((cell, index) => {

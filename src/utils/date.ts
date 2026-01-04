@@ -1,4 +1,8 @@
 import { DayCellState } from "../types";
+import {
+  getWeekStartPreference,
+  setWeekStartPreference as setStoredWeekStartPreference,
+} from "../services/preferences";
 
 const MONTHS = [
   "January",
@@ -16,6 +20,46 @@ const MONTHS = [
 ];
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+const FALLBACK_LOCALE = "en-US";
+
+function getResolvedLocale(): string {
+  if (typeof navigator !== "undefined" && navigator.language) {
+    return navigator.language;
+  }
+  if (typeof Intl !== "undefined" && Intl.DateTimeFormat) {
+    return Intl.DateTimeFormat().resolvedOptions().locale || FALLBACK_LOCALE;
+  }
+  return FALLBACK_LOCALE;
+}
+
+function getLocaleWeekStart(): number {
+  const locale = getResolvedLocale();
+  if (typeof Intl !== "undefined" && "Locale" in Intl) {
+    try {
+      const localeInfo = new Intl.Locale(locale);
+      const weekInfo = (
+        localeInfo as Intl.Locale & { weekInfo?: { firstDay?: number } }
+      ).weekInfo;
+      if (weekInfo?.firstDay) {
+        return weekInfo.firstDay % 7;
+      }
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+}
+
+export function setWeekStartPreference(dayIndex: number): void {
+  setStoredWeekStartPreference(dayIndex);
+}
+
+function getWeekStart(): number {
+  const stored = getWeekStartPreference();
+  if (stored !== null) return stored;
+  return getLocaleWeekStart();
+}
 
 /**
  * Format a Date object to DD-MM-YYYY string
@@ -126,7 +170,9 @@ export function getDaysInMonth(year: number, month: number): number {
  * Get the day of week the month starts on (0 = Sunday)
  */
 export function getFirstDayOfMonth(year: number, month: number): number {
-  return new Date(year, month, 1).getDay();
+  const dayOfWeek = new Date(year, month, 1).getDay();
+  const weekStart = getWeekStart();
+  return (dayOfWeek - weekStart + 7) % 7;
 }
 
 /**
@@ -139,6 +185,28 @@ export function getMonthName(month: number): string {
 /**
  * Get weekday abbreviations
  */
+export function getWeekdayOptions(): Array<{ label: string; dayIndex: number }> {
+  const locale = getResolvedLocale();
+  const weekStart = getWeekStart();
+  if (typeof Intl === "undefined" || !Intl.DateTimeFormat) {
+    return WEEKDAYS.map((label, index) => ({
+      label,
+      dayIndex: (weekStart + index) % 7,
+    }));
+  }
+  const formatter = new Intl.DateTimeFormat(locale, { weekday: "short" });
+  const baseDate = new Date(Date.UTC(2023, 0, 1));
+  return Array.from({ length: 7 }, (_, index) => {
+    const dayIndex = (weekStart + index) % 7;
+    const date = new Date(baseDate);
+    date.setUTCDate(baseDate.getUTCDate() + dayIndex);
+    return {
+      label: formatter.format(date),
+      dayIndex,
+    };
+  });
+}
+
 export function getWeekdays(): string[] {
-  return WEEKDAYS;
+  return getWeekdayOptions().map((weekday) => weekday.label);
 }
