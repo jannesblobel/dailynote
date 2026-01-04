@@ -59,6 +59,15 @@ export function Calendar({
   return (
     <div className="calendar">
       <div className="calendar__header">
+        <a
+          className="calendar__auth calendar__header-commit"
+          href={commitUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span className="calendar__footer-icon" aria-hidden="true" />
+          {commitHash}
+        </a>
         <Button
           icon
           onClick={() => onYearChange(year - 1)}
@@ -98,25 +107,6 @@ export function Calendar({
             onDayClick={onDayClick}
           />
         ))}
-      </div>
-      <div className="calendar__footer">
-        <a
-          className="calendar__footer-link"
-          href="https://github.com/katspaugh"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <span>Built by</span> katspaugh
-        </a>
-        <a
-          className="calendar__footer-link calendar__footer-link--github"
-          href={commitUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <span className="calendar__footer-icon" aria-hidden="true" />
-          {commitHash}
-        </a>
       </div>
     </div>
   );

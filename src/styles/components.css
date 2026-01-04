@@ -117,31 +117,6 @@
   align-content: start;
 }
 
-.calendar__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: var(--spacing-sm);
-}
-
-.calendar__footer-link {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  text-decoration: none;
-  padding: var(--spacing-xxs) var(--spacing-xs);
-  border-radius: var(--radius-sm);
-}
-
-.calendar__footer-link span {
-  opacity: 0.7;
-}
-
-.calendar__footer-link--github {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
 .calendar__footer-icon {
   width: 14px;
   height: 14px;
@@ -157,9 +132,12 @@
   -webkit-mask-position: center;
 }
 
-.calendar__footer-link:hover {
-  color: var(--color-text);
-  background-color: var(--color-surface);
+.calendar__header-commit {
+  position: absolute;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
 @media (max-width: 1200px) {
@@ -907,6 +885,11 @@
     position: static;
     width: 100%;
     justify-content: flex-end;
+    order: -1;
+  }
+
+  .calendar__header-commit {
+    position: static;
     order: -1;
   }
 
