@@ -1,4 +1,5 @@
 import type { ClipboardEvent, DragEvent, FormEvent, MouseEvent, RefObject } from 'react';
+import { Button } from '../Button';
 
 interface NoteEditorViewProps {
   formattedDate: string;
@@ -13,6 +14,7 @@ interface NoteEditorViewProps {
   onDragOver?: (event: DragEvent<HTMLDivElement>) => void;
   onClick?: (event: MouseEvent<HTMLDivElement>) => void;
   isDraggingImage?: boolean;
+  onClose?: () => void;
 }
 
 export function NoteEditorView({
@@ -27,7 +29,8 @@ export function NoteEditorView({
   onDrop,
   onDragOver,
   onClick,
-  isDraggingImage = false
+  isDraggingImage = false,
+  onClose
 }: NoteEditorViewProps) {
   return (
     <div className="note-editor">
@@ -48,6 +51,16 @@ export function NoteEditorView({
             {statusText ?? ''}
           </span>
         </div>
+        {onClose && (
+          <Button
+            className="note-editor__close"
+            icon
+            onClick={onClose}
+            aria-label="Close"
+          >
+            ✕
+          </Button>
+        )}
       </div>
       <div className="note-editor__body">
         <div

@@ -6,9 +6,16 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   variant?: 'default' | 'overlay';
+  showCloseButton?: boolean;
 }
 
-export function Modal({ isOpen, onClose, children, variant = 'default' }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  children,
+  variant = 'default',
+  showCloseButton = true
+}: ModalProps) {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
@@ -57,15 +64,19 @@ export function Modal({ isOpen, onClose, children, variant = 'default' }: ModalP
 
   return (
     <div className="modal-backdrop" onClick={handleBackdropClick}>
-      <Button
-        className="modal-close-button"
-        icon
-        onClick={onClose}
-        aria-label="Close"
-      >
-        ✕
-      </Button>
       <div className="modal-content">
+        {showCloseButton && (
+          <div className="modal-close-row">
+            <Button
+              className="modal-close-button"
+              icon
+              onClick={onClose}
+              aria-label="Close"
+            >
+              ✕
+            </Button>
+          </div>
+        )}
         {children}
       </div>
     </div>

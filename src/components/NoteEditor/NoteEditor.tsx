@@ -14,6 +14,7 @@ interface NoteEditorProps {
   hasEdits: boolean;
   isDecrypting?: boolean;
   isContentReady: boolean;
+  onClose?: () => void;
 }
 
 export function NoteEditor({
@@ -23,7 +24,8 @@ export function NoteEditor({
   isClosing,
   hasEdits,
   isDecrypting = false,
-  isContentReady
+  isContentReady,
+  onClose
 }: NoteEditorProps) {
   const canEdit = canEditNote(date);
   const isEditable = canEdit && !isDecrypting && isContentReady;
@@ -86,6 +88,7 @@ export function NoteEditor({
       onDragOver={handleDragOver}
       onClick={handleClick}
       isDraggingImage={isDraggingImage}
+      onClose={onClose}
     />
   );
 }

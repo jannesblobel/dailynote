@@ -3,17 +3,19 @@ interface NavigationArrowProps {
   onClick: () => void;
   disabled: boolean;
   ariaLabel: string;
+  className?: string;
 }
 
 export function NavigationArrow({
   direction,
   onClick,
   disabled,
-  ariaLabel
+  ariaLabel,
+  className
 }: NavigationArrowProps) {
   return (
     <button
-      className={`navigation-arrow navigation-arrow--${direction}`}
+      className={`navigation-arrow navigation-arrow--${direction}${className ? ` ${className}` : ''}`}
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}

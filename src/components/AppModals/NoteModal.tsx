@@ -36,7 +36,7 @@ export function NoteModal({
   navigateToNext
 }: NoteModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={onClose} showCloseButton={false}>
       {date && shouldRenderNoteEditor && (
         <>
           <NavigationArrow
@@ -44,12 +44,14 @@ export function NoteModal({
             onClick={navigateToPrevious}
             disabled={!canNavigatePrev}
             ariaLabel="Previous note"
+            className="navigation-arrow--floating"
           />
           <NavigationArrow
             direction="right"
             onClick={navigateToNext}
             disabled={!canNavigateNext}
             ariaLabel="Next note"
+            className="navigation-arrow--floating"
           />
           <div className="note-editor-wrapper">
             <NoteEditor
@@ -60,6 +62,23 @@ export function NoteModal({
               hasEdits={hasEdits}
               isDecrypting={isDecrypting}
               isContentReady={isContentReady}
+              onClose={onClose}
+            />
+          </div>
+          <div className="note-editor-nav">
+            <NavigationArrow
+              direction="left"
+              onClick={navigateToPrevious}
+              disabled={!canNavigatePrev}
+              ariaLabel="Previous note"
+              className="navigation-arrow--inline"
+            />
+            <NavigationArrow
+              direction="right"
+              onClick={navigateToNext}
+              disabled={!canNavigateNext}
+              ariaLabel="Next note"
+              className="navigation-arrow--inline"
             />
           </div>
         </>
