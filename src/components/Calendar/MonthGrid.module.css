@@ -5,8 +5,12 @@
   width: 100%;
 }
 
-.monthGrid[data-current-month="true"] {
-  /* Month view styling is handled by parent grid */
+.monthGrid[data-month-view="true"] {
+  padding: var(--spacing-lg);
+}
+
+.monthGrid[data-month-view="true"] .weekdays {
+  margin-bottom: var(--spacing-md);
 }
 
 .header {
@@ -56,6 +60,11 @@
   gap: 2px;
 }
 
+.monthGrid[data-month-view="true"] .days {
+  gap: 4px;
+  font-size: var(--font-size-lg);
+}
+
 @media (min-width: 1200px) {
   .monthGrid {
     padding: var(--spacing-sm);
@@ -101,5 +110,19 @@
     gap: 1px;
     flex: 1;
     overflow: hidden;
+  }
+
+  .monthGrid[data-month-view="true"] {
+    padding: var(--spacing-xl);
+  }
+
+  .monthGrid[data-month-view="true"] .weekdays {
+    margin-bottom: var(--spacing-lg);
+    font-size: var(--font-size-sm);
+  }
+
+  .monthGrid[data-month-view="true"] .days {
+    gap: 6px;
+    font-size: var(--font-size-xl);
   }
 }

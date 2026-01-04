@@ -65,10 +65,9 @@ export function MonthGrid({
     <div
       className={styles.monthGrid}
       data-current-month={isCurrentMonth ? "true" : undefined}
+      data-month-view={showMonthView ? "true" : undefined}
     >
-      {showMonthView ? (
-        <div className={styles.header}>{monthName}</div>
-      ) : (
+      {!showMonthView && (
         <button
           className={styles.headerButton}
           onClick={handleMonthClick}
