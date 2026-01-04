@@ -102,6 +102,17 @@
   margin-bottom: var(--spacing-xl);
 }
 
+.calendar__year-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.calendar__header-spacer {
+  flex: 1;
+  display: none;
+}
+
 .calendar__year {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-semibold);
@@ -879,17 +890,29 @@
   .calendar__header {
     flex-wrap: wrap;
     gap: var(--spacing-md);
+    justify-content: flex-start;
+  }
+
+  .calendar__year-controls {
+    width: 100%;
+    justify-content: center;
+    order: 1;
   }
 
   .calendar__header-actions {
     position: static;
-    width: 100%;
-    justify-content: flex-end;
+    width: auto;
+    justify-content: flex-start;
     order: -1;
   }
 
   .calendar__header-commit {
     position: static;
+    order: -1;
+  }
+
+  .calendar__header-spacer {
+    display: block;
     order: -1;
   }
 

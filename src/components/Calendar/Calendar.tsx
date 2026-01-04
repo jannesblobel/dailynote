@@ -68,21 +68,7 @@ export function Calendar({
           <span className="calendar__footer-icon" aria-hidden="true" />
           {commitHash}
         </a>
-        <Button
-          icon
-          onClick={() => onYearChange(year - 1)}
-          aria-label="Previous year"
-        >
-          ←
-        </Button>
-        <span className="calendar__year">{year}</span>
-        <Button
-          icon
-          onClick={() => onYearChange(year + 1)}
-          aria-label="Next year"
-        >
-          →
-        </Button>
+        <div className="calendar__header-spacer" aria-hidden="true" />
         <div className="calendar__header-actions">
           {syncStatus && <SyncIndicator status={syncStatus} pendingOps={pendingOps} />}
           {onSignIn && (
@@ -95,6 +81,23 @@ export function Calendar({
               Sign out
             </button>
           )}
+        </div>
+        <div className="calendar__year-controls">
+          <Button
+            icon
+            onClick={() => onYearChange(year - 1)}
+            aria-label="Previous year"
+          >
+            ←
+          </Button>
+          <span className="calendar__year">{year}</span>
+          <Button
+            icon
+            onClick={() => onYearChange(year + 1)}
+            aria-label="Next year"
+          >
+            →
+          </Button>
         </div>
       </div>
       <div className="calendar__grid">
