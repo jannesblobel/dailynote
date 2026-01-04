@@ -65,8 +65,8 @@ export function formatDateDisplay(dateStr: string): string {
 /**
  * Get the state of a day cell relative to today
  */
-export function getDayCellState(date: Date): DayCellState {
-  const today = new Date();
+export function getDayCellState(date: Date, now: Date = new Date()): DayCellState {
+  const today = new Date(now);
   today.setHours(0, 0, 0, 0);
 
   const compareDate = new Date(date);

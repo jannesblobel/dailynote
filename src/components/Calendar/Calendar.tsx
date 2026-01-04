@@ -14,6 +14,7 @@ interface CalendarProps {
   pendingOps?: PendingOpsSummary;
   onSignIn?: () => void;
   onSignOut?: () => void;
+  now?: Date;
 }
 
 export function Calendar({
@@ -24,7 +25,8 @@ export function Calendar({
   syncStatus,
   pendingOps,
   onSignIn,
-  onSignOut
+  onSignOut,
+  now
 }: CalendarProps) {
   const months = Array.from({ length: 12 }, (_, i) => i);
   const hasAutoScrolledRef = useRef(false);
@@ -108,6 +110,7 @@ export function Calendar({
             month={month}
             hasNote={hasNote}
             onDayClick={onDayClick}
+            now={now}
           />
         ))}
       </div>

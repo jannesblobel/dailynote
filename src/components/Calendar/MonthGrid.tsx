@@ -15,13 +15,15 @@ interface MonthGridProps {
   month: number;
   hasNote: (date: string) => boolean;
   onDayClick?: (date: string) => void;
+  now?: Date;
 }
 
-export function MonthGrid({ year, month, hasNote, onDayClick }: MonthGridProps) {
+export function MonthGrid({ year, month, hasNote, onDayClick, now }: MonthGridProps) {
   const weekdays = getWeekdays();
   const monthName = getMonthName(month);
-  const now = new Date();
-  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+  const resolvedNow = now ?? new Date();
+  const isCurrentMonth =
+    year === resolvedNow.getFullYear() && month === resolvedNow.getMonth();
 
   const days = useMemo(() => {
     const daysInMonth = getDaysInMonth(year, month);
@@ -57,7 +59,7 @@ export function MonthGrid({ year, month, hasNote, onDayClick }: MonthGridProps) 
           }
 
           const dateStr = formatDate(cell.date);
-          const state = getDayCellState(cell.date);
+          const state = getDayCellState(cell.date, resolvedNow);
 
           return (
             <DayCell
