@@ -35,7 +35,7 @@ export function Calendar({
   now,
 }: CalendarProps) {
   const hasAutoScrolledRef = useRef(false);
-  const [weekStartVersion, setWeekStartVersion] = useState(0);
+  const [, setWeekStartVersion] = useState(0);
   const commitHash = __COMMIT_HASH__;
   const commitUrl = `https://github.com/katspaugh/dailynote/commit/${commitHash}`;
   const handleWeekStartChange = useCallback(() => {
@@ -90,7 +90,6 @@ export function Calendar({
         hasNote={hasNote}
         onDayClick={onDayClick}
         onMonthClick={onMonthChange}
-        weekStartVersion={weekStartVersion}
         onWeekStartChange={handleWeekStartChange}
         now={now}
       />

@@ -19,7 +19,6 @@ interface MonthGridProps {
   onDayClick?: (date: string) => void;
   onMonthClick?: (year: number, month: number) => void;
   showMonthView?: boolean;
-  weekStartVersion?: number;
   onWeekStartChange?: () => void;
   now?: Date;
 }
@@ -31,14 +30,10 @@ export function MonthGrid({
   onDayClick,
   onMonthClick,
   showMonthView = false,
-  weekStartVersion,
   onWeekStartChange,
   now,
 }: MonthGridProps) {
-  const weekdays = useMemo(
-    () => getWeekdayOptions(),
-    [weekStartVersion],
-  );
+  const weekdays = getWeekdayOptions();
   const currentWeekStart = weekdays[0]?.dayIndex ?? 0;
   const monthName = getMonthName(month);
   const resolvedNow = now ?? new Date();
@@ -77,13 +72,15 @@ export function MonthGrid({
       data-month-view={showMonthView ? "true" : undefined}
     >
       {!showMonthView && (
-        <button
-          className={styles.headerButton}
-          onClick={handleMonthClick}
-          aria-label={`View ${monthName}`}
-        >
-          {monthName}
-        </button>
+        <div className={styles.headerWrap}>
+          <button
+            className={styles.headerButton}
+            onClick={handleMonthClick}
+            aria-label={`View ${monthName}`}
+          >
+            {monthName}
+          </button>
+        </div>
       )}
       <div className={styles.weekdays}>
         {weekdays.map((day) => {

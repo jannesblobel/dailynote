@@ -7,7 +7,6 @@ interface CalendarGridProps {
   hasNote: (date: string) => boolean;
   onDayClick?: (date: string) => void;
   onMonthClick?: (year: number, month: number) => void;
-  weekStartVersion?: number;
   onWeekStartChange?: () => void;
   now?: Date;
 }
@@ -18,7 +17,6 @@ export function CalendarGrid({
   hasNote,
   onDayClick,
   onMonthClick,
-  weekStartVersion,
   onWeekStartChange,
   now,
 }: CalendarGridProps) {
@@ -40,7 +38,6 @@ export function CalendarGrid({
           onDayClick={onDayClick}
           onMonthClick={onMonthClick}
           showMonthView={month !== null}
-          weekStartVersion={weekStartVersion}
           onWeekStartChange={onWeekStartChange}
           now={now}
         />
