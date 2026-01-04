@@ -601,7 +601,8 @@
   margin: var(--spacing-lg) calc(-1 * var(--spacing-xl));
 }
 
-.note-editor__content hr[data-timestamp]::before {
+.note-editor__content hr[data-timestamp][data-label]::before {
+  content: attr(data-label);
   position: absolute;
   right: 0;
   top: -14px;

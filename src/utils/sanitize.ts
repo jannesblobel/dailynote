@@ -13,6 +13,7 @@ const SANITIZE_CONFIG = {
   ALLOWED_ATTR: [
     'data-image-id',
     'data-timestamp',
+    'data-label',
     'alt',
     'width',
     'height',

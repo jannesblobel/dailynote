@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useId, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { ClipboardEvent, DragEvent, MouseEvent } from 'react';
 import { linkifyElement } from '../../utils/linkify';
 
 const TIMESTAMP_ATTR = 'data-timestamp';
+const TIMESTAMP_LABEL_ATTR = 'data-label';
 const ADDITION_WINDOW_MS = 10 * 60 * 1000;
 
 interface ContentEditableOptions {
@@ -102,13 +103,13 @@ function formatTimestampLabel(timestamp: string): string {
   return time;
 }
 
-function escapeCssContent(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\A ');
-}
-
 function createTimestampHr(timestamp: string): HTMLHRElement {
   const hr = document.createElement('hr');
   hr.setAttribute(TIMESTAMP_ATTR, timestamp);
+  const label = formatTimestampLabel(timestamp);
+  if (label) {
+    hr.setAttribute(TIMESTAMP_LABEL_ATTR, label);
+  }
   hr.setAttribute('contenteditable', 'false');
   return hr;
 }
@@ -146,7 +147,6 @@ export function useContentEditableEditor({
   const lastUserInputRef = useRef<number | null>(null);
   const lastEditedBlockRef = useRef<Element | null>(null);
   const hasInsertedTimestampRef = useRef(false);
-  const styleId = `note-editor-timestamps-${useId()}`;
 
   const insertTimestampHrIfNeeded = useCallback(() => {
     const el = editorRef.current;
@@ -197,38 +197,25 @@ export function useContentEditableEditor({
     }
   }, []);
 
-  const updateTimestampStyles = useCallback((element?: HTMLElement) => {
+  const updateTimestampLabels = useCallback((element?: HTMLElement) => {
     const el = element ?? editorRef.current;
     if (!el) return;
     
     const hrs = Array.from(el.querySelectorAll<HTMLHRElement>(`hr[${TIMESTAMP_ATTR}]`));
-    
-    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
-    if (!styleEl) {
-      styleEl = document.createElement('style');
-      styleEl.id = styleId;
-      document.head.appendChild(styleEl);
-    }
-    
-    if (hrs.length === 0) {
-      styleEl.textContent = '';
-      return;
-    }
-    
-    const rules: string[] = [];
     for (const hr of hrs) {
       const timestamp = hr.getAttribute(TIMESTAMP_ATTR);
       if (!timestamp) continue;
       
       const label = formatTimestampLabel(timestamp);
-      if (!label) continue;
-      
-      const escapedTimestamp = timestamp.replace(/"/g, '\\"').replace(/:/g, '\\:');
-      rules.push(`hr[data-timestamp="${escapedTimestamp}"]::before { content: "${escapeCssContent(label)}"; }`);
+      if (label) {
+        if (hr.getAttribute(TIMESTAMP_LABEL_ATTR) !== label) {
+          hr.setAttribute(TIMESTAMP_LABEL_ATTR, label);
+        }
+      } else {
+        hr.removeAttribute(TIMESTAMP_LABEL_ATTR);
+      }
     }
-    
-    styleEl.textContent = rules.join('\n');
-  }, [styleId]);
+  }, []);
 
   const updateEmptyState = useCallback(() => {
     const el = editorRef.current;
@@ -268,21 +255,21 @@ export function useContentEditableEditor({
     }
     if (content === lastContentRef.current) {
       updateEmptyState();
-      updateTimestampStyles(el);
+      updateTimestampLabels(el);
       return;
     }
     const nextContent = content || '';
     if (nextContent === el.innerHTML) {
       lastContentRef.current = nextContent;
       updateEmptyState();
-      updateTimestampStyles(el);
+      updateTimestampLabels(el);
       return;
     }
     el.innerHTML = nextContent;
     lastContentRef.current = nextContent;
     updateEmptyState();
-    updateTimestampStyles(el);
-  }, [content, updateEmptyState, updateTimestampStyles]);
+    updateTimestampLabels(el);
+  }, [content, updateEmptyState, updateTimestampLabels]);
 
   const handleInput = useCallback(() => {
     if (!isEditableRef.current) return;
@@ -368,16 +355,10 @@ export function useContentEditableEditor({
     }
     lastContentRef.current = html;
     isLocalEditRef.current = true;
-    updateTimestampStyles(el);
+    updateTimestampLabels(el);
     onChangeRef.current(html);
     onUserInputRef.current?.();
-  }, [insertTimestampHrIfNeeded, updateEmptyState, updateTimestampStyles]);
-
-  useEffect(() => {
-    return () => {
-      document.getElementById(styleId)?.remove();
-    };
-  }, [styleId]);
+  }, [insertTimestampHrIfNeeded, updateEmptyState, updateTimestampLabels]);
 
   const handlePaste = useCallback((event: ClipboardEvent<HTMLDivElement>) => {
     if (!isEditableRef.current) return;
