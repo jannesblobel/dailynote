@@ -1,5 +1,6 @@
-import { SyncStatus } from '../../types';
-import type { PendingOpsSummary } from '../../domain/sync';
+import { SyncStatus } from "../../types";
+import type { PendingOpsSummary } from "../../domain/sync";
+import styles from "./SyncIndicator.module.css";
 
 interface SyncIndicatorProps {
   status: SyncStatus;
@@ -11,30 +12,38 @@ export function SyncIndicator({ status, pendingOps }: SyncIndicatorProps) {
 
   const getLabel = () => {
     if (hasPendingOps && status === SyncStatus.Idle) {
-      return 'Sync needed';
+      return "Sync needed";
     }
     switch (status) {
       case SyncStatus.Syncing:
-        return 'Syncing...';
+        return "Syncing...";
       case SyncStatus.Synced:
-        return 'Synced';
+        return "Synced";
       case SyncStatus.Offline:
-        return 'Offline';
+        return "Offline";
       case SyncStatus.Error:
-        return 'Sync error';
+        return "Sync error";
       default:
-        return '';
+        return "";
     }
   };
 
   const label = getLabel();
   if (!label) return null;
 
-  const classSuffix = hasPendingOps && status === SyncStatus.Idle ? 'pending' : status;
+  const classSuffix =
+    hasPendingOps && status === SyncStatus.Idle ? "pending" : status;
+  const statusClassMap: Record<string, string | undefined> = {
+    [SyncStatus.Synced]: styles.synced,
+    [SyncStatus.Error]: styles.error,
+    [SyncStatus.Offline]: styles.offline,
+    pending: styles.pending,
+  };
+  const statusClass = statusClassMap[classSuffix];
 
   return (
-    <span className={`sync-indicator sync-indicator--${classSuffix}`}>
-      {status === SyncStatus.Syncing && <span className="sync-indicator__spinner" />}
+    <span className={[styles.indicator, statusClass].filter(Boolean).join(" ")}>
+      {status === SyncStatus.Syncing && <span className={styles.spinner} />}
       {label}
     </span>
   );

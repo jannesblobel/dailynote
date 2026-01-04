@@ -1,23 +1,23 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { NoteImage } from '../types';
-import { bytesToBase64 } from './cryptoUtils';
-import type { ImageRepository } from './imageRepository';
-import type { ImageMetaRecord, ImageRecord } from './unifiedDb';
-import type { KeyringProvider } from './unifiedNoteRepository';
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { NoteImage } from "../types";
+import { bytesToBase64 } from "./cryptoUtils";
+import type { ImageRepository } from "./imageRepository";
+import type { ImageMetaRecord, ImageRecord } from "./unifiedDb";
+import type { KeyringProvider } from "./unifiedNoteRepository";
 import {
   getImageMeta,
   getImageRecord,
   setImageMeta,
-  storeImageAndMeta
-} from './unifiedImageStore';
-import { createUnifiedImageRepository } from './unifiedImageRepository';
+  storeImageAndMeta,
+} from "./unifiedImageStore";
+import { createUnifiedImageRepository } from "./unifiedImageRepository";
 
-const IMAGE_BUCKET = 'note-images';
+const IMAGE_BUCKET = "note-images";
 
 type RemoteImageRow = {
   id: string;
   note_date: string;
-  type: 'background' | 'inline';
+  type: "background" | "inline";
   filename: string;
   mime_type: string;
   width: number | null;
@@ -34,13 +34,15 @@ type RemoteImageRow = {
 };
 
 async function blobToBase64(blob: Blob): Promise<string> {
-  const buffer = await (blob.arrayBuffer ? blob.arrayBuffer() : new Response(blob).arrayBuffer());
+  const buffer = await (blob.arrayBuffer
+    ? blob.arrayBuffer()
+    : new Response(blob).arrayBuffer());
   return bytesToBase64(new Uint8Array(buffer));
 }
 
 function toLocalMeta(
   row: RemoteImageRow,
-  keyring: KeyringProvider
+  keyring: KeyringProvider,
 ): ImageMetaRecord | null {
   if (!row.note_date || !row.type || !row.filename || !row.mime_type) {
     return null;
@@ -56,26 +58,26 @@ function toLocalMeta(
     height: row.height ?? 0,
     size: row.size ?? 0,
     createdAt: row.created_at ?? new Date().toISOString(),
-    sha256: row.sha256 ?? '',
+    sha256: row.sha256 ?? "",
     keyId: row.key_id ?? keyring.activeKeyId,
     remotePath: row.ciphertext_path ?? row.storage_path ?? null,
     serverUpdatedAt: row.server_updated_at ?? null,
-    pendingOp: null
+    pendingOp: null,
   };
 }
 
 async function fetchRemoteImageRow(
   supabase: SupabaseClient,
   userId: string,
-  imageId: string
+  imageId: string,
 ): Promise<RemoteImageRow | null> {
   const { data, error } = await supabase
-    .from('note_images')
+    .from("note_images")
     .select(
-      'id, note_date, type, filename, mime_type, width, height, size, created_at, sha256, nonce, key_id, ciphertext_path, storage_path, server_updated_at, deleted'
+      "id, note_date, type, filename, mime_type, width, height, size, created_at, sha256, nonce, key_id, ciphertext_path, storage_path, server_updated_at, deleted",
     )
-    .eq('id', imageId)
-    .eq('user_id', userId)
+    .eq("id", imageId)
+    .eq("user_id", userId)
     .single();
 
   if (error || !data || data.deleted) {
@@ -89,18 +91,18 @@ async function ensureLocalImage(
   supabase: SupabaseClient,
   userId: string,
   keyring: KeyringProvider,
-  imageId: string
+  imageId: string,
 ): Promise<boolean> {
   const [record, meta] = await Promise.all([
     getImageRecord(imageId),
-    getImageMeta(imageId)
+    getImageMeta(imageId),
   ]);
 
   if (record && meta) {
     return true;
   }
 
-  if (meta?.pendingOp === 'delete') {
+  if (meta?.pendingOp === "delete") {
     return false;
   }
 
@@ -128,7 +130,7 @@ async function ensureLocalImage(
     id: row.id,
     keyId: metaRecord.keyId,
     ciphertext,
-    nonce: row.nonce
+    nonce: row.nonce,
   };
 
   await storeImageAndMeta(imageRecord, metaRecord);
@@ -139,15 +141,15 @@ async function fetchRemoteMetasByDate(
   supabase: SupabaseClient,
   userId: string,
   keyring: KeyringProvider,
-  noteDate: string
+  noteDate: string,
 ): Promise<NoteImage[]> {
   const { data, error } = await supabase
-    .from('note_images')
+    .from("note_images")
     .select(
-      'id, note_date, type, filename, mime_type, width, height, size, created_at, sha256, key_id, ciphertext_path, storage_path, server_updated_at, deleted'
+      "id, note_date, type, filename, mime_type, width, height, size, created_at, sha256, key_id, ciphertext_path, storage_path, server_updated_at, deleted",
     )
-    .eq('user_id', userId)
-    .eq('note_date', noteDate);
+    .eq("user_id", userId)
+    .eq("note_date", noteDate);
 
   if (error || !data) {
     return [];
@@ -173,7 +175,7 @@ async function fetchRemoteMetasByDate(
       width: row.width ?? 0,
       height: row.height ?? 0,
       size: row.size ?? 0,
-      createdAt: row.created_at ?? new Date().toISOString()
+      createdAt: row.created_at ?? new Date().toISOString(),
     });
   }
 
@@ -183,7 +185,7 @@ async function fetchRemoteMetasByDate(
 export function createUnifiedSyncedImageRepository(
   supabase: SupabaseClient,
   userId: string,
-  keyring: KeyringProvider
+  keyring: KeyringProvider,
 ): ImageRepository {
   const localRepo = createUnifiedImageRepository(keyring);
 
@@ -194,7 +196,12 @@ export function createUnifiedSyncedImageRepository(
     async get(imageId: string): Promise<Blob | null> {
       const local = await localRepo.get(imageId);
       if (local) return local;
-      const hydrated = await ensureLocalImage(supabase, userId, keyring, imageId);
+      const hydrated = await ensureLocalImage(
+        supabase,
+        userId,
+        keyring,
+        imageId,
+      );
       return hydrated ? await localRepo.get(imageId) : null;
     },
     async getUrl(imageId: string): Promise<string | null> {
@@ -205,6 +212,6 @@ export function createUnifiedSyncedImageRepository(
       const local = await localRepo.getByNoteDate(noteDate);
       if (local.length) return local;
       return await fetchRemoteMetasByDate(supabase, userId, keyring, noteDate);
-    }
+    },
   };
 }

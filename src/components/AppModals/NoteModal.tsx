@@ -1,6 +1,7 @@
-import { Modal } from '../Modal';
-import { NavigationArrow } from '../NavigationArrow';
-import { NoteEditor } from '../NoteEditor';
+import { Modal } from "../Modal";
+import { NavigationArrow } from "../NavigationArrow";
+import { NoteEditor } from "../NoteEditor";
+import styles from "./NoteModal.module.css";
 
 interface NoteModalProps {
   isOpen: boolean;
@@ -33,55 +34,44 @@ export function NoteModal({
   canNavigatePrev,
   canNavigateNext,
   navigateToPrevious,
-  navigateToNext
+  navigateToNext,
 }: NoteModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} showCloseButton={false}>
+    <Modal isOpen={isOpen} onClose={onClose}>
       {date && shouldRenderNoteEditor && (
-        <>
-          <NavigationArrow
-            direction="left"
-            onClick={navigateToPrevious}
-            disabled={!canNavigatePrev}
-            ariaLabel="Previous note"
-            className="navigation-arrow--floating"
-          />
-          <NavigationArrow
-            direction="right"
-            onClick={navigateToNext}
-            disabled={!canNavigateNext}
-            ariaLabel="Next note"
-            className="navigation-arrow--floating"
-          />
-          <div className="note-editor-wrapper">
+        <div className={styles.modalWrapper}>
+          <div className={styles.editorWrapper}>
             <NoteEditor
               date={date}
-              content={isContentReady ? content : ''}
+              content={isContentReady ? content : ""}
               onChange={onChange}
               isClosing={isClosing}
               hasEdits={hasEdits}
               isDecrypting={isDecrypting}
               isContentReady={isContentReady}
-              onClose={onClose}
             />
           </div>
-          <div className="note-editor-nav">
-            <NavigationArrow
-              direction="left"
-              onClick={navigateToPrevious}
-              disabled={!canNavigatePrev}
-              ariaLabel="Previous note"
-              className="navigation-arrow--inline"
-            />
-            <NavigationArrow
-              direction="right"
-              onClick={navigateToNext}
-              disabled={!canNavigateNext}
-              ariaLabel="Next note"
-              className="navigation-arrow--inline"
-            />
+
+          <div className={styles.nav}>
+            <div className={styles.leftArrow}>
+              <NavigationArrow
+                direction="left"
+                onClick={navigateToPrevious}
+                disabled={!canNavigatePrev}
+                ariaLabel="Previous note"
+              />
+            </div>
+
+            <div className={styles.rightArrow}>
+              <NavigationArrow
+                direction="right"
+                onClick={navigateToNext}
+                disabled={!canNavigateNext}
+                ariaLabel="Next note"
+              />
+            </div>
           </div>
-        </>
+        </div>
       )}
     </Modal>
   );

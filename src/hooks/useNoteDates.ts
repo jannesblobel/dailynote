@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { NoteRepository } from '../storage/noteRepository';
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { NoteRepository } from "../storage/noteRepository";
 
 interface UseNoteDatesReturn {
   hasNote: (date: string) => boolean;
@@ -11,13 +11,15 @@ interface YearDateRepository {
   getAllDatesForYear: (year: number) => Promise<string[]>;
 }
 
-function supportsYearDates(repository: NoteRepository | null): repository is NoteRepository & YearDateRepository {
-  return !!repository && 'getAllDatesForYear' in repository;
+function supportsYearDates(
+  repository: NoteRepository | null,
+): repository is NoteRepository & YearDateRepository {
+  return !!repository && "getAllDatesForYear" in repository;
 }
 
 export function useNoteDates(
   repository: NoteRepository | null,
-  year: number
+  year: number,
 ): UseNoteDatesReturn {
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
   const refreshInFlightRef = useRef<Promise<void> | null>(null);
@@ -39,7 +41,7 @@ export function useNoteDates(
           ? repository.getAllDatesForYear(year)
           : repository.getAllDates();
       })
-      .then(dates => setNoteDates(new Set(dates)))
+      .then((dates) => setNoteDates(new Set(dates)))
       .catch(() => setNoteDates(new Set()))
       .finally(() => {
         refreshInFlightRef.current = null;
@@ -51,25 +53,28 @@ export function useNoteDates(
     refreshInFlightRef.current = refreshPromise;
   }, [repository, year]);
 
-  const refreshNoteDates = useCallback((options?: { immediate?: boolean }) => {
-    if (options?.immediate) {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-        refreshTimeoutRef.current = null;
+  const refreshNoteDates = useCallback(
+    (options?: { immediate?: boolean }) => {
+      if (options?.immediate) {
+        if (refreshTimeoutRef.current) {
+          clearTimeout(refreshTimeoutRef.current);
+          refreshTimeoutRef.current = null;
+        }
+        runRefresh();
+        return;
       }
-      runRefresh();
-      return;
-    }
 
-    if (refreshTimeoutRef.current) {
-      return;
-    }
+      if (refreshTimeoutRef.current) {
+        return;
+      }
 
-    refreshTimeoutRef.current = setTimeout(() => {
-      refreshTimeoutRef.current = null;
-      runRefresh();
-    }, 400);
-  }, [runRefresh]);
+      refreshTimeoutRef.current = setTimeout(() => {
+        refreshTimeoutRef.current = null;
+        runRefresh();
+      }, 400);
+    },
+    [runRefresh],
+  );
 
   useEffect(() => {
     runRefreshRef.current = runRefresh;
@@ -102,6 +107,6 @@ export function useNoteDates(
   return {
     hasNote,
     noteDates,
-    refreshNoteDates
+    refreshNoteDates,
   };
 }

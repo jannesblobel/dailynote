@@ -1,16 +1,16 @@
-require('fake-indexeddb/auto');
-const { webcrypto } = require('node:crypto');
-const { TextDecoder, TextEncoder } = require('node:util');
+require("fake-indexeddb/auto");
+const { webcrypto } = require("node:crypto");
+const { TextDecoder, TextEncoder } = require("node:util");
 
 if (!globalThis.crypto || !globalThis.crypto.subtle) {
-  Object.defineProperty(globalThis, 'crypto', {
+  Object.defineProperty(globalThis, "crypto", {
     value: webcrypto,
-    configurable: true
+    configurable: true,
   });
-  if (typeof window !== 'undefined') {
-    Object.defineProperty(window, 'crypto', {
+  if (typeof window !== "undefined") {
+    Object.defineProperty(window, "crypto", {
       value: webcrypto,
-      configurable: true
+      configurable: true,
     });
   }
 }

@@ -1,9 +1,9 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export class RevisionConflictError extends Error {
-  code = 'REVISION_CONFLICT';
+  code = "REVISION_CONFLICT";
   constructor() {
-    super('Revision conflict');
+    super("Revision conflict");
   }
 }
 
@@ -38,24 +38,24 @@ function mapRemoteRow(row: RemoteNoteRow): RemoteNote {
     date: row.date,
     ciphertext: row.ciphertext,
     nonce: row.nonce,
-    keyId: row.key_id ?? 'legacy',
+    keyId: row.key_id ?? "legacy",
     revision: row.revision,
     updatedAt: row.updated_at,
     serverUpdatedAt: row.server_updated_at,
-    deleted: row.deleted
+    deleted: row.deleted,
   };
 }
 
 export async function fetchRemoteNoteByDate(
   supabase: SupabaseClient,
   userId: string,
-  date: string
+  date: string,
 ): Promise<RemoteNote | null> {
   const { data, error } = await supabase
-    .from('notes')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', date)
+    .from("notes")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("date", date)
     .maybeSingle();
 
   if (error) throw error;
@@ -66,16 +66,16 @@ export async function fetchRemoteNoteByDate(
 export async function fetchRemoteNoteDates(
   supabase: SupabaseClient,
   userId: string,
-  year?: number
+  year?: number,
 ): Promise<string[]> {
   let query = supabase
-    .from('notes')
-    .select('date')
-    .eq('user_id', userId)
-    .eq('deleted', false);
+    .from("notes")
+    .select("date")
+    .eq("user_id", userId)
+    .eq("deleted", false);
 
-  if (typeof year === 'number') {
-    query = query.eq('note_year', year);
+  if (typeof year === "number") {
+    query = query.eq("note_year", year);
   }
 
   const { data, error } = await query;
@@ -86,16 +86,16 @@ export async function fetchRemoteNoteDates(
 export async function fetchRemoteNotesSince(
   supabase: SupabaseClient,
   userId: string,
-  cursor: string | null
+  cursor: string | null,
 ): Promise<RemoteNote[]> {
   let query = supabase
-    .from('notes')
-    .select('*')
-    .eq('user_id', userId)
-    .order('server_updated_at', { ascending: true });
+    .from("notes")
+    .select("*")
+    .eq("user_id", userId)
+    .order("server_updated_at", { ascending: true });
 
   if (cursor) {
-    query = query.gt('server_updated_at', cursor);
+    query = query.gt("server_updated_at", cursor);
   }
 
   const { data, error } = await query;
@@ -118,7 +118,7 @@ export interface RemoteNotePayload {
 export async function pushRemoteNote(
   supabase: SupabaseClient,
   userId: string,
-  note: RemoteNotePayload
+  note: RemoteNotePayload,
 ): Promise<RemoteNote> {
   const payload = {
     user_id: userId,
@@ -128,28 +128,28 @@ export async function pushRemoteNote(
     key_id: note.keyId,
     revision: note.revision,
     updated_at: note.updatedAt,
-    deleted: note.deleted
+    deleted: note.deleted,
   };
 
   if (note.id) {
     let query = supabase
-      .from('notes')
+      .from("notes")
       .update(payload)
-      .eq('id', note.id)
-      .eq('user_id', userId);
+      .eq("id", note.id)
+      .eq("user_id", userId);
 
     if (note.serverUpdatedAt) {
-      query = query.eq('server_updated_at', note.serverUpdatedAt);
+      query = query.eq("server_updated_at", note.serverUpdatedAt);
     } else {
-      query = query.is('server_updated_at', null);
+      query = query.is("server_updated_at", null);
     }
 
     const { data, error } = await query.select().maybeSingle();
     if (error) {
-      if ('status' in error && error.status === 404) {
+      if ("status" in error && error.status === 404) {
         throw new RevisionConflictError();
       }
-      if ('code' in error && error.code === 'PGRST116') {
+      if ("code" in error && error.code === "PGRST116") {
         throw new RevisionConflictError();
       }
       throw error;
@@ -159,19 +159,19 @@ export async function pushRemoteNote(
   }
 
   const { data, error } = await supabase
-    .from('notes')
+    .from("notes")
     .insert(payload)
     .select()
     .single();
 
   if (error) {
-    if ('code' in error && error.code === '23505') {
+    if ("code" in error && error.code === "23505") {
       throw new RevisionConflictError();
     }
-    if ('status' in error && error.status === 404) {
+    if ("status" in error && error.status === 404) {
       throw new RevisionConflictError();
     }
-    if ('code' in error && error.code === 'PGRST116') {
+    if ("code" in error && error.code === "PGRST116") {
       throw new RevisionConflictError();
     }
     throw error;

@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from "react";
 
 interface UseNoteKeyboardNavProps {
   enabled: boolean;
@@ -11,12 +11,12 @@ export function useNoteKeyboardNav({
   enabled,
   onPrevious,
   onNext,
-  contentEditableSelector
+  contentEditableSelector,
 }: UseNoteKeyboardNavProps): void {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       // Only handle arrow keys
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
         return;
       }
 
@@ -33,22 +33,22 @@ export function useNoteKeyboardNav({
       e.preventDefault();
 
       // Navigate
-      if (e.key === 'ArrowLeft') {
+      if (e.key === "ArrowLeft") {
         onPrevious();
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === "ArrowRight") {
         onNext();
       }
     },
-    [onPrevious, onNext, contentEditableSelector]
+    [onPrevious, onNext, contentEditableSelector],
   );
 
   useEffect(() => {
     if (!enabled) return;
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [enabled, handleKeyDown]);
 }

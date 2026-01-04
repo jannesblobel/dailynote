@@ -1,4 +1,5 @@
-import { DayCellState } from '../../types';
+import { DayCellState } from "../../types";
+import styles from "./DayCell.module.css";
 
 interface DayCellProps {
   day: number | null;
@@ -10,34 +11,43 @@ interface DayCellProps {
 
 export function DayCell({ day, date, state, hasNote, onClick }: DayCellProps) {
   if (day === null) {
-    return <div className="day-cell day-cell--empty" />;
+    return <div className={`${styles.dayCell} ${styles.empty}`} />;
   }
 
   const isClickable =
-    state === DayCellState.Today ||
-    (state === DayCellState.Past && hasNote);
+    state === DayCellState.Today || (state === DayCellState.Past && hasNote);
 
   // Create accessible label with full date
-  const ariaLabel = date ?
-    `${date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}${hasNote ? ', has note' : ''}` :
-    undefined;
+  const ariaLabel = date
+    ? `${date.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}${hasNote ? ", has note" : ""}`
+    : undefined;
 
   return (
     <div
-      className={`day-cell day-cell--${state}${isClickable ? ' day-cell--clickable' : ''}`}
+      className={[
+        styles.dayCell,
+        styles[state],
+        isClickable && styles.clickable,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       onClick={isClickable ? onClick : undefined}
-      role={isClickable ? 'button' : undefined}
+      role={isClickable ? "button" : undefined}
       tabIndex={isClickable ? 0 : undefined}
       aria-label={isClickable ? ariaLabel : undefined}
-      onKeyDown={isClickable ? (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick?.();
-        }
-      } : undefined}
+      onKeyDown={
+        isClickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
     >
       {day}
-      {hasNote && <span className="day-cell__indicator" aria-hidden="true" />}
+      {hasNote && <span className={styles.indicator} aria-hidden="true" />}
     </div>
   );
 }

@@ -1,11 +1,11 @@
-import { IntroModal } from './IntroModal';
-import { ModeChoiceModal } from './ModeChoiceModal';
-import { LocalVaultModal } from './LocalVaultModal';
-import { CloudAuthModal } from './CloudAuthModal';
-import { VaultErrorModal } from './VaultErrorModal';
-import { NoteModal } from './NoteModal';
-import type { AuthState } from '../../types';
-import type { AppMode } from '../../hooks/useAppMode';
+import { IntroModal } from "./IntroModal";
+import { ModeChoiceModal } from "./ModeChoiceModal";
+import { LocalVaultModal } from "./LocalVaultModal";
+import { CloudAuthModal } from "./CloudAuthModal";
+import { VaultErrorModal } from "./VaultErrorModal";
+import { NoteModal } from "./NoteModal";
+import type { AuthState } from "../../types";
+import type { AppMode } from "../../hooks/useAppMode";
 
 interface AppModalsViewProps {
   introModal: {
@@ -35,6 +35,7 @@ interface AppModalsViewProps {
     isBusy: boolean;
     error: string | null;
     localPassword: string | null;
+    onDismiss: () => void;
     onBackToSignIn: () => void;
     onSignIn: (email: string, password: string) => Promise<void>;
     onSignUp: (email: string, password: string) => Promise<void>;
@@ -44,6 +45,7 @@ interface AppModalsViewProps {
     error: string | null;
     mode: AppMode;
     onSignOut: () => Promise<void>;
+    onDismiss: () => void;
   };
   noteModal: {
     isOpen: boolean;
@@ -69,7 +71,7 @@ export function AppModalsView({
   localVaultModal,
   cloudAuthModal,
   vaultErrorModal,
-  noteModal
+  noteModal,
 }: AppModalsViewProps) {
   return (
     <>
@@ -103,6 +105,7 @@ export function AppModalsView({
         isBusy={cloudAuthModal.isBusy}
         error={cloudAuthModal.error}
         localPassword={cloudAuthModal.localPassword}
+        onDismiss={cloudAuthModal.onDismiss}
         onBackToSignIn={cloudAuthModal.onBackToSignIn}
         onSignIn={cloudAuthModal.onSignIn}
         onSignUp={cloudAuthModal.onSignUp}
@@ -113,6 +116,7 @@ export function AppModalsView({
         error={vaultErrorModal.error}
         mode={vaultErrorModal.mode}
         onSignOut={vaultErrorModal.onSignOut}
+        onDismiss={vaultErrorModal.onDismiss}
       />
 
       <NoteModal

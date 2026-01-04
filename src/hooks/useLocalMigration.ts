@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react';
-import { createEncryptedNoteRepository } from '../storage/noteStorage';
-import type { SyncedNoteRepository } from '../storage/syncedNoteRepository';
-import { STORAGE_PREFIX } from '../utils/constants';
-import { AppMode } from '../utils/appMode';
+import { useEffect, useState } from "react";
+import { createEncryptedNoteRepository } from "../storage/noteStorage";
+import type { SyncedNoteRepository } from "../storage/syncedNoteRepository";
+import { STORAGE_PREFIX } from "../utils/constants";
+import { AppMode } from "../utils/appMode";
 
 const LOCAL_MIGRATION_KEY = `${STORAGE_PREFIX}local_migrated_v1`;
 
 const getMigrationFlag = () =>
-  typeof window !== 'undefined' && localStorage.getItem(LOCAL_MIGRATION_KEY) === '1';
+  typeof window !== "undefined" &&
+  localStorage.getItem(LOCAL_MIGRATION_KEY) === "1";
 
 const setMigrationFlag = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(LOCAL_MIGRATION_KEY, '1');
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LOCAL_MIGRATION_KEY, "1");
   }
 };
 
@@ -37,7 +38,7 @@ export function useLocalMigration({
   localKey,
   hasMigrated,
   onMigrated,
-  triggerSync
+  triggerSync,
 }: UseLocalMigrationOptions): UseLocalMigrationReturn {
   const [isMigrating, setIsMigrating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -85,7 +86,7 @@ export function useLocalMigration({
               content: note.content,
               updatedAt: note.updatedAt,
               revision: 1,
-              deleted: false
+              deleted: false,
             });
           }
         }
@@ -98,10 +99,12 @@ export function useLocalMigration({
       } catch (caught) {
         if (!cancelled) {
           const error =
-            caught instanceof Error ? caught : new Error('Failed to migrate local notes.');
+            caught instanceof Error
+              ? caught
+              : new Error("Failed to migrate local notes.");
           setError(error);
         }
-        console.error('Local migration error:', caught);
+        console.error("Local migration error:", caught);
       } finally {
         if (!cancelled) {
           setIsMigrating(false);
@@ -114,7 +117,15 @@ export function useLocalMigration({
     return () => {
       cancelled = true;
     };
-  }, [mode, cloudRepo, cloudKey, localKey, hasMigrated, onMigrated, triggerSync]);
+  }, [
+    mode,
+    cloudRepo,
+    cloudKey,
+    localKey,
+    hasMigrated,
+    onMigrated,
+    triggerSync,
+  ]);
 
   return { isMigrating, error };
 }

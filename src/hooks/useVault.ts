@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-import { tryDeviceUnlockCloudKey, unlockCloudVault } from '../domain/vault';
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase";
+import { tryDeviceUnlockCloudKey, unlockCloudVault } from "../domain/vault";
 
 export interface UseVaultReturn {
   vaultKey: CryptoKey | null;
@@ -11,6 +11,7 @@ export interface UseVaultReturn {
   isLocked: boolean;
   isBusy: boolean;
   error: string | null;
+  clearError: () => void;
 }
 
 interface UseVaultProps {
@@ -26,7 +27,7 @@ export function useVault({
   password,
   localDek,
   localKeyring,
-  onPasswordConsumed
+  onPasswordConsumed,
 }: UseVaultProps): UseVaultReturn {
   const [vaultKey, setVaultKey] = useState<CryptoKey | null>(null);
   const [keyring, setKeyring] = useState<Map<string, CryptoKey>>(new Map());
@@ -93,15 +94,15 @@ export function useVault({
           userId: user.id,
           password,
           localDek,
-          localKeyring
+          localKeyring,
         });
         setVaultKey(result.vaultKey);
         setKeyring(result.keyring);
         setPrimaryKeyId(result.primaryKeyId);
         setError(null);
       } catch (err) {
-        console.error('Vault unlock error:', err);
-        setError('Unable to unlock. Check your password and try again.');
+        console.error("Vault unlock error:", err);
+        setError("Unable to unlock. Check your password and try again.");
       } finally {
         setIsBusy(false);
         setIsReady(true);
@@ -118,6 +119,10 @@ export function useVault({
     setVaultKey(null);
   }, []);
 
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   // Listen for sign out
   useEffect(() => {
     if (!user && vaultKey) {
@@ -132,6 +137,7 @@ export function useVault({
     isReady,
     isLocked: !vaultKey,
     isBusy,
-    error
+    error,
+    clearError,
   };
 }

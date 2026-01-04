@@ -1,5 +1,5 @@
-import { Modal } from '../Modal';
-import { VaultUnlock } from '../VaultUnlock';
+import { Modal } from "../Modal";
+import { VaultUnlock } from "../VaultUnlock";
 
 interface LocalVaultModalProps {
   isOpen: boolean;
@@ -16,12 +16,12 @@ export function LocalVaultModal({
   isBusy,
   error,
   onUnlock,
-  onSwitchToCloud
+  onSwitchToCloud,
 }: LocalVaultModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={() => {}} variant="overlay">
+    <Modal isOpen={isOpen} onClose={() => {}} isDismissable={false}>
       <VaultUnlock
-        mode={hasVault ? 'unlock' : 'setup'}
+        mode={hasVault ? "unlock" : "setup"}
         isBusy={isBusy}
         error={error}
         onUnlock={onUnlock}

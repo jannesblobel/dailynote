@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react';
-import type { Note } from '../types';
-import type { NoteRepository } from '../storage/noteRepository';
-import { isContentEmpty } from '../utils/sanitize';
+import { useCallback, useEffect, useReducer, useRef } from "react";
+import type { Note } from "../types";
+import type { NoteRepository } from "../storage/noteRepository";
+import { isContentEmpty } from "../utils/sanitize";
 
 interface UseNoteContentReturn {
   content: string;
@@ -13,25 +13,25 @@ interface UseNoteContentReturn {
 
 export type NoteContentState =
   | {
-      status: 'idle';
+      status: "idle";
       date: null;
-      content: '';
+      content: "";
       hasEdits: false;
       isDecrypting: false;
       isContentReady: false;
       error: null;
     }
   | {
-      status: 'loading';
+      status: "loading";
       date: string;
-      content: '';
+      content: "";
       hasEdits: false;
       isDecrypting: true;
       isContentReady: false;
       error: null;
     }
   | {
-      status: 'ready';
+      status: "ready";
       date: string;
       content: string;
       hasEdits: boolean;
@@ -40,7 +40,7 @@ export type NoteContentState =
       error: null;
     }
   | {
-      status: 'error';
+      status: "error";
       date: string;
       content: string;
       hasEdits: boolean;
@@ -50,22 +50,22 @@ export type NoteContentState =
     };
 
 export type NoteContentAction =
-  | { type: 'RESET' }
-  | { type: 'LOAD_START'; date: string }
-  | { type: 'LOAD_SUCCESS'; date: string; content: string }
-  | { type: 'LOAD_ERROR'; date: string; error: Error }
-  | { type: 'REMOTE_UPDATE'; date: string; content: string }
-  | { type: 'EDIT'; content: string }
-  | { type: 'SAVE_SUCCESS'; date: string; content: string };
+  | { type: "RESET" }
+  | { type: "LOAD_START"; date: string }
+  | { type: "LOAD_SUCCESS"; date: string; content: string }
+  | { type: "LOAD_ERROR"; date: string; error: Error }
+  | { type: "REMOTE_UPDATE"; date: string; content: string }
+  | { type: "EDIT"; content: string }
+  | { type: "SAVE_SUCCESS"; date: string; content: string };
 
 export const initialNoteContentState: NoteContentState = {
-  status: 'idle',
+  status: "idle",
   date: null,
-  content: '',
+  content: "",
   hasEdits: false,
   isDecrypting: false,
   isContentReady: false,
-  error: null
+  error: null,
 };
 
 /*
@@ -80,75 +80,75 @@ State transitions:
 */
 export function noteContentReducer(
   state: NoteContentState,
-  action: NoteContentAction
+  action: NoteContentAction,
 ): NoteContentState {
   switch (action.type) {
-    case 'RESET':
+    case "RESET":
       return initialNoteContentState;
-    case 'LOAD_START':
+    case "LOAD_START":
       return {
-        status: 'loading',
+        status: "loading",
         date: action.date,
-        content: '',
+        content: "",
         hasEdits: false,
         isDecrypting: true,
         isContentReady: false,
-        error: null
+        error: null,
       };
-    case 'LOAD_SUCCESS':
-      if (state.status !== 'loading' || state.date !== action.date) {
+    case "LOAD_SUCCESS":
+      if (state.status !== "loading" || state.date !== action.date) {
         return state;
       }
       return {
-        status: 'ready',
+        status: "ready",
         date: action.date,
         content: action.content,
         hasEdits: false,
         isDecrypting: false,
         isContentReady: true,
-        error: null
+        error: null,
       };
-    case 'LOAD_ERROR':
-      if (state.status !== 'loading' || state.date !== action.date) {
+    case "LOAD_ERROR":
+      if (state.status !== "loading" || state.date !== action.date) {
         return state;
       }
       return {
-        status: 'error',
+        status: "error",
         date: action.date,
-        content: '',
+        content: "",
         hasEdits: false,
         isDecrypting: false,
         isContentReady: true,
-        error: action.error
+        error: action.error,
       };
-    case 'REMOTE_UPDATE':
+    case "REMOTE_UPDATE":
       if (state.date !== action.date || state.hasEdits) {
         return state;
       }
       return {
-        status: 'ready',
+        status: "ready",
         date: action.date,
         content: action.content,
         hasEdits: false,
         isDecrypting: false,
         isContentReady: true,
-        error: null
+        error: null,
       };
-    case 'EDIT':
+    case "EDIT":
       if (!state.isContentReady) {
         return state;
       }
       return {
-        status: 'ready',
+        status: "ready",
         date: state.date,
         content: action.content,
         hasEdits: true,
         isDecrypting: false,
         isContentReady: true,
-        error: null
+        error: null,
       };
-    case 'SAVE_SUCCESS':
-      if (state.status !== 'ready' || state.date !== action.date) {
+    case "SAVE_SUCCESS":
+      if (state.status !== "ready" || state.date !== action.date) {
         return state;
       }
       if (state.content !== action.content) {
@@ -156,7 +156,7 @@ export function noteContentReducer(
       }
       return {
         ...state,
-        hasEdits: false
+        hasEdits: false,
       };
     default:
       return state;
@@ -166,9 +166,12 @@ export function noteContentReducer(
 export function useNoteContent(
   date: string | null,
   repository: NoteRepository | null,
-  onAfterSave?: () => void
+  onAfterSave?: () => void,
 ): UseNoteContentReturn {
-  const [state, dispatch] = useReducer(noteContentReducer, initialNoteContentState);
+  const [state, dispatch] = useReducer(
+    noteContentReducer,
+    initialNoteContentState,
+  );
   const saveTimeoutRef = useRef<number | null>(null);
   const pendingSaveRef = useRef<Promise<void> | null>(null);
   const isMountedRef = useRef(true);
@@ -180,7 +183,9 @@ export function useNoteContent(
 
   const enqueueSave = useCallback(
     (saveDate: string, saveContent: string, saveRepository: NoteRepository) => {
-      pendingSaveRef.current = (pendingSaveRef.current ?? Promise.resolve()).then(async () => {
+      pendingSaveRef.current = (
+        pendingSaveRef.current ?? Promise.resolve()
+      ).then(async () => {
         try {
           if (!isContentEmpty(saveContent)) {
             await saveRepository.save(saveDate, saveContent);
@@ -188,15 +193,19 @@ export function useNoteContent(
             await saveRepository.delete(saveDate);
           }
           if (isMountedRef.current) {
-            dispatch({ type: 'SAVE_SUCCESS', date: saveDate, content: saveContent });
+            dispatch({
+              type: "SAVE_SUCCESS",
+              date: saveDate,
+              content: saveContent,
+            });
           }
           onAfterSave?.();
         } catch (error) {
-          console.error('Failed to save note:', error);
+          console.error("Failed to save note:", error);
         }
       });
     },
-    [onAfterSave]
+    [onAfterSave],
   );
 
   // Load content when date/repository changes
@@ -210,41 +219,52 @@ export function useNoteContent(
     }
 
     if (!date || !repository) {
-      dispatch({ type: 'RESET' });
+      dispatch({ type: "RESET" });
       return;
     }
 
     let cancelled = false;
-    dispatch({ type: 'LOAD_START', date });
+    dispatch({ type: "LOAD_START", date });
 
     const load = async () => {
       try {
-        if ('getWithRefresh' in repository && typeof repository.getWithRefresh === 'function') {
-          const note = await repository.getWithRefresh(date, (remoteNote: Note | null) => {
-            const updatedContent = remoteNote?.content ?? '';
-            if (cancelled) return;
-            dispatch({ type: 'REMOTE_UPDATE', date, content: updatedContent });
-          });
-          const loadedContent = note?.content ?? '';
+        if (
+          "getWithRefresh" in repository &&
+          typeof repository.getWithRefresh === "function"
+        ) {
+          const note = await repository.getWithRefresh(
+            date,
+            (remoteNote: Note | null) => {
+              const updatedContent = remoteNote?.content ?? "";
+              if (cancelled) return;
+              dispatch({
+                type: "REMOTE_UPDATE",
+                date,
+                content: updatedContent,
+              });
+            },
+          );
+          const loadedContent = note?.content ?? "";
           if (!cancelled) {
-            dispatch({ type: 'LOAD_SUCCESS', date, content: loadedContent });
+            dispatch({ type: "LOAD_SUCCESS", date, content: loadedContent });
           }
           return;
         }
 
         const note = await repository.get(date);
-        const loadedContent = note?.content ?? '';
+        const loadedContent = note?.content ?? "";
 
         if (!cancelled) {
-          dispatch({ type: 'LOAD_SUCCESS', date, content: loadedContent });
+          dispatch({ type: "LOAD_SUCCESS", date, content: loadedContent });
         }
       } catch (error) {
-        console.error('Failed to load note:', error);
+        console.error("Failed to load note:", error);
         if (!cancelled) {
           dispatch({
-            type: 'LOAD_ERROR',
+            type: "LOAD_ERROR",
             date,
-            error: error instanceof Error ? error : new Error('Failed to load note')
+            error:
+              error instanceof Error ? error : new Error("Failed to load note"),
           });
         }
       }
@@ -258,12 +278,15 @@ export function useNoteContent(
   }, [date, repository, enqueueSave]);
 
   // Update content
-  const setContent = useCallback((newContent: string) => {
-    if (!state.isContentReady) return;
-    if (newContent === state.content) return;
+  const setContent = useCallback(
+    (newContent: string) => {
+      if (!state.isContentReady) return;
+      if (newContent === state.content) return;
 
-    dispatch({ type: 'EDIT', content: newContent });
-  }, [state.isContentReady, state.content]);
+      dispatch({ type: "EDIT", content: newContent });
+    },
+    [state.isContentReady, state.content],
+  );
 
   useEffect(() => {
     if (
@@ -278,7 +301,7 @@ export function useNoteContent(
     const snapshot = {
       date: state.date,
       content: state.content,
-      repository
+      repository,
     };
 
     pendingSaveSnapshotRef.current = snapshot;
@@ -305,7 +328,7 @@ export function useNoteContent(
     state.isContentReady,
     state.date,
     repository,
-    enqueueSave
+    enqueueSave,
   ]);
 
   // Save on unmount
@@ -329,6 +352,6 @@ export function useNoteContent(
     setContent,
     isDecrypting: state.isDecrypting,
     hasEdits: state.hasEdits,
-    isContentReady: state.isContentReady
+    isContentReady: state.isContentReady,
   };
 }

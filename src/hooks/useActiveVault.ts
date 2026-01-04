@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { UseAuthReturn } from './useAuth';
-import { useLocalVault } from './useLocalVault';
-import { useVault } from './useVault';
-import { AppMode } from './useAppMode';
-import { tryDeviceUnlockCloudKey } from '../domain/vault';
-import { computeKeyId } from '../storage/keyId';
-import { listLocalKeyIds, restoreLocalWrappedKey, storeLocalWrappedKey } from '../storage/localKeyring';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { UseAuthReturn } from "./useAuth";
+import { useLocalVault } from "./useLocalVault";
+import { useVault } from "./useVault";
+import { AppMode } from "./useAppMode";
+import { tryDeviceUnlockCloudKey } from "../domain/vault";
+import { computeKeyId } from "../storage/keyId";
+import {
+  listLocalKeyIds,
+  restoreLocalWrappedKey,
+  storeLocalWrappedKey,
+} from "../storage/localKeyring";
 
 interface UseActiveVaultProps {
   auth: UseAuthReturn;
@@ -31,16 +35,24 @@ export interface UseActiveVaultReturn {
   handleSignIn: (email: string, password: string) => Promise<void>;
   handleSignUp: (email: string, password: string) => Promise<void>;
   handleSignOut: () => Promise<void>;
+  clearVaultError: () => void;
   setLocalPassword: (password: string | null) => void;
 }
 
-export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): UseActiveVaultReturn {
+export function useActiveVault({
+  auth,
+  mode,
+  setMode,
+}: UseActiveVaultProps): UseActiveVaultReturn {
   const localVault = useLocalVault();
   const [authPassword, setAuthPassword] = useState<string | null>(null);
   const [localPassword, setLocalPassword] = useState<string | null>(null);
-  const [restoredCloudVaultKey, setRestoredCloudVaultKey] = useState<CryptoKey | null>(null);
+  const [restoredCloudVaultKey, setRestoredCloudVaultKey] =
+    useState<CryptoKey | null>(null);
   const [localKeyId, setLocalKeyId] = useState<string | null>(null);
-  const [localKeyring, setLocalKeyring] = useState<Map<string, CryptoKey>>(new Map());
+  const [localKeyring, setLocalKeyring] = useState<Map<string, CryptoKey>>(
+    new Map(),
+  );
 
   const handlePasswordConsumed = useCallback(() => {
     setAuthPassword(null);
@@ -51,7 +63,7 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
     password: authPassword,
     localDek: localVault.vaultKey,
     localKeyring,
-    onPasswordConsumed: handlePasswordConsumed
+    onPasswordConsumed: handlePasswordConsumed,
   });
 
   const cloudPrimaryKey = cloudVault.vaultKey ?? restoredCloudVaultKey;
@@ -120,7 +132,7 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
         try {
           await storeLocalWrappedKey(keyId, key, localKey);
         } catch (error) {
-          console.warn('Failed to cache cloud key locally:', error);
+          console.warn("Failed to cache cloud key locally:", error);
         }
       }
     };
@@ -132,54 +144,78 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
     const merged = new Map<string, CryptoKey>();
     localKeyring.forEach((value, key) => merged.set(key, value));
     cloudVault.keyring.forEach((value, key) => merged.set(key, value));
-    if (cloudVault.primaryKeyId && !merged.has('legacy')) {
+    if (cloudVault.primaryKeyId && !merged.has("legacy")) {
       const primary = cloudVault.keyring.get(cloudVault.primaryKeyId);
       if (primary) {
-        merged.set('legacy', primary);
+        merged.set("legacy", primary);
       }
     }
     return merged;
   }, [localKeyring, cloudVault.keyring, cloudVault.primaryKeyId]);
 
   const candidateKeyId =
-    mode === AppMode.Cloud && cloudVault.primaryKeyId ? cloudVault.primaryKeyId : localKeyId;
+    mode === AppMode.Cloud && cloudVault.primaryKeyId
+      ? cloudVault.primaryKeyId
+      : localKeyId;
   const activeKeyId =
     candidateKeyId && mergedKeyring.has(candidateKeyId) ? candidateKeyId : null;
-  const vaultKey = activeKeyId ? mergedKeyring.get(activeKeyId) ?? null : null;
-  const isVaultReady = mode === AppMode.Cloud ? cloudVault.isReady : localVault.isReady;
-  const isVaultLocked = mode === AppMode.Cloud ? cloudVault.isLocked : localVault.isLocked;
-  const vaultError = mode === AppMode.Cloud ? cloudVault.error : localVault.error;
+  const vaultKey = activeKeyId
+    ? (mergedKeyring.get(activeKeyId) ?? null)
+    : null;
+  const isVaultReady =
+    mode === AppMode.Cloud ? cloudVault.isReady : localVault.isReady;
+  const isVaultLocked =
+    mode === AppMode.Cloud ? cloudVault.isLocked : localVault.isLocked;
+  const vaultError =
+    mode === AppMode.Cloud ? cloudVault.error : localVault.error;
   const isVaultUnlocked = !isVaultLocked && isVaultReady;
 
-  const handleLocalUnlock = useCallback(async (password: string) => {
-    const success = await localVault.unlock(password);
-    if (success) {
-      setLocalPassword(password);
-    }
-    return success;
-  }, [localVault]);
+  const handleLocalUnlock = useCallback(
+    async (password: string) => {
+      const success = await localVault.unlock(password);
+      if (success) {
+        setLocalPassword(password);
+      }
+      return success;
+    },
+    [localVault],
+  );
 
-  const handleSignIn = useCallback(async (email: string, password: string) => {
-    const result = await auth.signIn(email, password);
-    if (result.success && result.password) {
-      setAuthPassword(result.password);
-      setMode(AppMode.Cloud);
-    }
-  }, [auth, setMode]);
+  const handleSignIn = useCallback(
+    async (email: string, password: string) => {
+      const result = await auth.signIn(email, password);
+      if (result.success && result.password) {
+        setAuthPassword(result.password);
+        setMode(AppMode.Cloud);
+      }
+    },
+    [auth, setMode],
+  );
 
-  const handleSignUp = useCallback(async (email: string, password: string) => {
-    const result = await auth.signUp(email, password);
-    if (result.success && result.password) {
-      setAuthPassword(result.password);
-      setMode(AppMode.Cloud);
-    }
-  }, [auth, setMode]);
+  const handleSignUp = useCallback(
+    async (email: string, password: string) => {
+      const result = await auth.signUp(email, password);
+      if (result.success && result.password) {
+        setAuthPassword(result.password);
+        setMode(AppMode.Cloud);
+      }
+    },
+    [auth, setMode],
+  );
 
   const handleSignOut = useCallback(async () => {
     await auth.signOut();
     setMode(AppMode.Local);
     setAuthPassword(null);
   }, [auth, setMode]);
+
+  const clearVaultError = useCallback(() => {
+    if (mode === AppMode.Cloud) {
+      cloudVault.clearError();
+      return;
+    }
+    localVault.clearError();
+  }, [cloudVault, localVault, mode]);
 
   return {
     auth,
@@ -199,6 +235,7 @@ export function useActiveVault({ auth, mode, setMode }: UseActiveVaultProps): Us
     handleSignIn,
     handleSignUp,
     handleSignOut,
-    setLocalPassword
+    clearVaultError,
+    setLocalPassword,
   };
 }

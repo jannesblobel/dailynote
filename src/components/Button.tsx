@@ -1,6 +1,7 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from "react";
+import styles from "./Button.module.css";
 
-type ButtonVariant = 'primary' | 'ghost';
+type ButtonVariant = "primary" | "ghost";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -9,18 +10,20 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({
-  variant = 'ghost',
+  variant = "ghost",
   icon = false,
   children,
-  className = '',
+  className = "",
   ...props
 }: ButtonProps) {
   const classes = [
-    'button',
-    `button--${variant}`,
-    icon && 'button--icon',
-    className
-  ].filter(Boolean).join(' ');
+    styles.button,
+    styles[variant],
+    icon && styles.icon,
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <button className={classes} {...props}>

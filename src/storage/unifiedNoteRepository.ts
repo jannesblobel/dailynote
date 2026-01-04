@@ -1,15 +1,15 @@
-import type { Note } from '../types';
-import type { NoteRepository } from './noteRepository';
-import { sanitizeHtml } from '../utils/sanitize';
-import type { NoteMetaRecord, NoteRecord } from './unifiedDb';
+import type { Note } from "../types";
+import type { NoteRepository } from "./noteRepository";
+import { sanitizeHtml } from "../utils/sanitize";
+import type { NoteMetaRecord, NoteRecord } from "./unifiedDb";
 import {
   decryptNoteContent,
   encryptNoteContent,
   getAllNoteRecords,
   getNoteMeta,
   getNoteRecord,
-  setNoteAndMeta
-} from './unifiedNoteStore';
+  setNoteAndMeta,
+} from "./unifiedNoteStore";
 
 export interface UnifiedNoteRepository extends NoteRepository {
   getAllDatesForYear(year: number): Promise<string[]>;
@@ -21,7 +21,7 @@ export interface KeyringProvider {
 }
 
 export function createUnifiedNoteRepository(
-  keyring: KeyringProvider
+  keyring: KeyringProvider,
 ): UnifiedNoteRepository {
   return {
     async get(date: string): Promise<Note | null> {
@@ -37,7 +37,7 @@ export function createUnifiedNoteRepository(
         return {
           date: record.date,
           content,
-          updatedAt: record.updatedAt
+          updatedAt: record.updatedAt,
         };
       } catch {
         return null;
@@ -51,7 +51,10 @@ export function createUnifiedNoteRepository(
       if (!key) {
         return;
       }
-      const { ciphertext, nonce } = await encryptNoteContent(key, sanitizedContent);
+      const { ciphertext, nonce } = await encryptNoteContent(
+        key,
+        sanitizedContent,
+      );
       const updatedAt = new Date().toISOString();
 
       const record: NoteRecord = {
@@ -61,7 +64,7 @@ export function createUnifiedNoteRepository(
         ciphertext,
         nonce,
         updatedAt,
-        deleted: false
+        deleted: false,
       };
 
       const meta: NoteMetaRecord = {
@@ -70,7 +73,7 @@ export function createUnifiedNoteRepository(
         remoteId: existingMeta?.remoteId ?? null,
         serverUpdatedAt: existingMeta?.serverUpdatedAt ?? null,
         lastSyncedAt: existingMeta?.lastSyncedAt ?? null,
-        pendingOp: 'upsert'
+        pendingOp: "upsert",
       };
 
       await setNoteAndMeta(record, meta);
@@ -85,7 +88,7 @@ export function createUnifiedNoteRepository(
       const record: NoteRecord = {
         ...existing,
         updatedAt,
-        deleted: true
+        deleted: true,
       };
 
       const meta: NoteMetaRecord = {
@@ -94,7 +97,7 @@ export function createUnifiedNoteRepository(
         remoteId: existingMeta?.remoteId ?? null,
         serverUpdatedAt: existingMeta?.serverUpdatedAt ?? null,
         lastSyncedAt: existingMeta?.lastSyncedAt ?? null,
-        pendingOp: 'delete'
+        pendingOp: "delete",
       };
 
       await setNoteAndMeta(record, meta);
@@ -102,7 +105,9 @@ export function createUnifiedNoteRepository(
 
     async getAllDates(): Promise<string[]> {
       const records = await getAllNoteRecords();
-      return records.filter((record) => !record.deleted).map((record) => record.date);
+      return records
+        .filter((record) => !record.deleted)
+        .map((record) => record.date);
     },
 
     async getAllDatesForYear(year: number): Promise<string[]> {
@@ -112,6 +117,6 @@ export function createUnifiedNoteRepository(
         .filter((record) => !record.deleted)
         .map((record) => record.date)
         .filter((date) => date.endsWith(suffix));
-    }
+    },
   };
 }

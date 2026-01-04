@@ -1,11 +1,11 @@
-import type { NoteImage } from '../types';
-import type { ImageRepository } from './imageRepository';
-import { base64ToBytes, bytesToBase64, randomBytes } from './cryptoUtils';
+import type { NoteImage } from "../types";
+import type { ImageRepository } from "./imageRepository";
+import { base64ToBytes, bytesToBase64, randomBytes } from "./cryptoUtils";
 
 const IMAGE_IV_BYTES = 12;
-const IMAGES_DB_NAME = 'dailynotes-images';
-const IMAGES_STORE = 'images'; // Stores encrypted image blobs
-const META_STORE = 'image_meta'; // Stores image metadata
+const IMAGES_DB_NAME = "dailynotes-images";
+const IMAGES_STORE = "images"; // Stores encrypted image blobs
+const META_STORE = "image_meta"; // Stores image metadata
 
 interface EncryptedImagePayload {
   version: 1;
@@ -30,9 +30,9 @@ function openImagesDb(): Promise<IDBDatabase> {
 
       // Create metadata store
       if (!db.objectStoreNames.contains(META_STORE)) {
-        const metaStore = db.createObjectStore(META_STORE, { keyPath: 'id' });
+        const metaStore = db.createObjectStore(META_STORE, { keyPath: "id" });
         // Index by noteDate for efficient queries
-        metaStore.createIndex('noteDate', 'noteDate', { unique: false });
+        metaStore.createIndex("noteDate", "noteDate", { unique: false });
       }
     };
 
@@ -46,20 +46,20 @@ function openImagesDb(): Promise<IDBDatabase> {
  */
 async function encryptImageBlob(
   vaultKey: CryptoKey,
-  blob: Blob
+  blob: Blob,
 ): Promise<EncryptedImagePayload> {
   const iv = randomBytes(IMAGE_IV_BYTES);
   const buffer = await blob.arrayBuffer();
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: "AES-GCM", iv },
     vaultKey,
-    buffer
+    buffer,
   );
 
   return {
     version: 1,
     iv: bytesToBase64(iv),
-    data: bytesToBase64(new Uint8Array(ciphertext))
+    data: bytesToBase64(new Uint8Array(ciphertext)),
   };
 }
 
@@ -69,14 +69,14 @@ async function encryptImageBlob(
 async function decryptImagePayload(
   vaultKey: CryptoKey,
   payload: EncryptedImagePayload,
-  mimeType: string
+  mimeType: string,
 ): Promise<Blob> {
   const iv = base64ToBytes(payload.iv);
   const ciphertext = base64ToBytes(payload.data);
   const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
+    { name: "AES-GCM", iv },
     vaultKey,
-    ciphertext
+    ciphertext,
   );
 
   return new Blob([decrypted], { type: mimeType });
@@ -86,9 +86,9 @@ async function decryptImagePayload(
  * Generate a UUID v4
  */
 function generateUuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
@@ -99,12 +99,12 @@ function generateUuid(): string {
 async function storeImage(
   imageId: string,
   payload: EncryptedImagePayload,
-  meta: NoteImage
+  meta: NoteImage,
 ): Promise<void> {
   const db = await openImagesDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction([IMAGES_STORE, META_STORE], 'readwrite');
+    const tx = db.transaction([IMAGES_STORE, META_STORE], "readwrite");
 
     // Store encrypted blob
     tx.objectStore(IMAGES_STORE).put(payload, imageId);
@@ -127,11 +127,13 @@ async function storeImage(
 /**
  * Get encrypted image payload
  */
-async function getImagePayload(imageId: string): Promise<EncryptedImagePayload | null> {
+async function getImagePayload(
+  imageId: string,
+): Promise<EncryptedImagePayload | null> {
   const db = await openImagesDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(IMAGES_STORE, 'readonly');
+    const tx = db.transaction(IMAGES_STORE, "readonly");
     const request = tx.objectStore(IMAGES_STORE).get(imageId);
 
     request.onsuccess = () => resolve(request.result ?? null);
@@ -152,7 +154,7 @@ async function getImageMeta(imageId: string): Promise<NoteImage | null> {
   const db = await openImagesDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(META_STORE, 'readonly');
+    const tx = db.transaction(META_STORE, "readonly");
     const request = tx.objectStore(META_STORE).get(imageId);
 
     request.onsuccess = () => resolve(request.result ?? null);
@@ -173,8 +175,8 @@ async function getImageMetaByDate(noteDate: string): Promise<NoteImage[]> {
   const db = await openImagesDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(META_STORE, 'readonly');
-    const index = tx.objectStore(META_STORE).index('noteDate');
+    const tx = db.transaction(META_STORE, "readonly");
+    const index = tx.objectStore(META_STORE).index("noteDate");
     const request = index.getAll(noteDate);
 
     request.onsuccess = () => resolve(request.result ?? []);
@@ -195,7 +197,7 @@ async function deleteImage(imageId: string): Promise<void> {
   const db = await openImagesDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction([IMAGES_STORE, META_STORE], 'readwrite');
+    const tx = db.transaction([IMAGES_STORE, META_STORE], "readwrite");
 
     tx.objectStore(IMAGES_STORE).delete(imageId);
     tx.objectStore(META_STORE).delete(imageId);
@@ -218,7 +220,7 @@ async function deleteImage(imageId: string): Promise<void> {
 async function deleteImagesByDate(noteDate: string): Promise<void> {
   const images = await getImageMetaByDate(noteDate);
 
-  await Promise.all(images.map(img => deleteImage(img.id)));
+  await Promise.all(images.map((img) => deleteImage(img.id)));
 }
 
 /**
@@ -228,14 +230,16 @@ async function deleteImagesByDate(noteDate: string): Promise<void> {
  * @param vaultKey - The vault encryption key
  * @returns ImageRepository implementation
  */
-export function createEncryptedImageRepository(vaultKey: CryptoKey): ImageRepository {
+export function createEncryptedImageRepository(
+  vaultKey: CryptoKey,
+): ImageRepository {
   return {
     async upload(
       noteDate: string,
       file: Blob,
-      type: 'background' | 'inline',
+      type: "background" | "inline",
       filename: string,
-      options?: { width?: number; height?: number }
+      options?: { width?: number; height?: number },
     ): Promise<NoteImage> {
       const imageId = generateUuid();
 
@@ -252,7 +256,7 @@ export function createEncryptedImageRepository(vaultKey: CryptoKey): ImageReposi
         width: options?.width ?? 0,
         height: options?.height ?? 0,
         size: file.size,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
       // Store encrypted blob and metadata
@@ -291,6 +295,6 @@ export function createEncryptedImageRepository(vaultKey: CryptoKey): ImageReposi
 
     async deleteByNoteDate(noteDate: string): Promise<void> {
       await deleteImagesByDate(noteDate);
-    }
+    },
   };
 }

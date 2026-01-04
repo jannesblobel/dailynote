@@ -1,11 +1,11 @@
-export const UNIFIED_DB_NAME = 'dailynotes-unified';
+export const UNIFIED_DB_NAME = "dailynotes-unified";
 export const UNIFIED_DB_VERSION = 1;
 
-export const NOTES_STORE = 'notes';
-export const NOTE_META_STORE = 'note_meta';
-export const IMAGES_STORE = 'images';
-export const IMAGE_META_STORE = 'image_meta';
-export const SYNC_STATE_STORE = 'sync_state';
+export const NOTES_STORE = "notes";
+export const NOTE_META_STORE = "note_meta";
+export const IMAGES_STORE = "images";
+export const IMAGE_META_STORE = "image_meta";
+export const SYNC_STATE_STORE = "sync_state";
 
 export interface NoteRecord {
   version: 1;
@@ -23,7 +23,7 @@ export interface NoteMetaRecord {
   remoteId?: string | null;
   serverUpdatedAt?: string | null;
   lastSyncedAt?: string | null;
-  pendingOp?: 'upsert' | 'delete' | null;
+  pendingOp?: "upsert" | "delete" | null;
 }
 
 export interface ImageRecord {
@@ -37,7 +37,7 @@ export interface ImageRecord {
 export interface ImageMetaRecord {
   id: string;
   noteDate: string;
-  type: 'background' | 'inline';
+  type: "background" | "inline";
   filename: string;
   mimeType: string;
   width: number;
@@ -48,11 +48,11 @@ export interface ImageMetaRecord {
   keyId: string;
   remotePath?: string | null;
   serverUpdatedAt?: string | null;
-  pendingOp?: 'upload' | 'delete' | null;
+  pendingOp?: "upload" | "delete" | null;
 }
 
 export interface SyncStateRecord {
-  id: 'state';
+  id: "state";
   cursor?: string | null;
 }
 
@@ -64,20 +64,20 @@ export function openUnifiedDb(): Promise<IDBDatabase> {
       const db = request.result;
 
       if (!db.objectStoreNames.contains(NOTES_STORE)) {
-        db.createObjectStore(NOTES_STORE, { keyPath: 'date' });
+        db.createObjectStore(NOTES_STORE, { keyPath: "date" });
       }
       if (!db.objectStoreNames.contains(NOTE_META_STORE)) {
-        db.createObjectStore(NOTE_META_STORE, { keyPath: 'date' });
+        db.createObjectStore(NOTE_META_STORE, { keyPath: "date" });
       }
       if (!db.objectStoreNames.contains(IMAGES_STORE)) {
-        db.createObjectStore(IMAGES_STORE, { keyPath: 'id' });
+        db.createObjectStore(IMAGES_STORE, { keyPath: "id" });
       }
       if (!db.objectStoreNames.contains(IMAGE_META_STORE)) {
-        const store = db.createObjectStore(IMAGE_META_STORE, { keyPath: 'id' });
-        store.createIndex('noteDate', 'noteDate', { unique: false });
+        const store = db.createObjectStore(IMAGE_META_STORE, { keyPath: "id" });
+        store.createIndex("noteDate", "noteDate", { unique: false });
       }
       if (!db.objectStoreNames.contains(SYNC_STATE_STORE)) {
-        db.createObjectStore(SYNC_STATE_STORE, { keyPath: 'id' });
+        db.createObjectStore(SYNC_STATE_STORE, { keyPath: "id" });
       }
     };
 

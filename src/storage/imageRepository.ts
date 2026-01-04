@@ -1,4 +1,4 @@
-import type { NoteImage } from '../types';
+import type { NoteImage } from "../types";
 
 /**
  * Repository interface for managing note images
@@ -17,9 +17,9 @@ export interface ImageRepository {
   upload(
     noteDate: string,
     file: Blob,
-    type: 'background' | 'inline',
+    type: "background" | "inline",
     filename: string,
-    options?: { width?: number; height?: number }
+    options?: { width?: number; height?: number },
   ): Promise<NoteImage>;
 
   /**

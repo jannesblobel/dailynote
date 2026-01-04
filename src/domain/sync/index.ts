@@ -1,9 +1,9 @@
 export type {
   PendingOpsSummary,
-  SyncService
-} from '../../services/syncService';
+  SyncService,
+} from "../../services/syncService";
 export {
   createSyncService,
   getPendingOpsSummary,
-  hasPendingOps
-} from '../../services/syncService';
+  hasPendingOps,
+} from "../../services/syncService";

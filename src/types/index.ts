@@ -14,7 +14,7 @@ export interface SyncedNote extends Note {
 export interface NoteImage {
   id: string; // UUID for the image
   noteDate: string; // DD-MM-YYYY format
-  type: 'background' | 'inline'; // Where the image is used
+  type: "background" | "inline"; // Where the image is used
   filename: string; // Original filename
   mimeType: string; // image/jpeg, image/png, etc.
   width: number; // Original dimensions for layout
@@ -24,17 +24,17 @@ export interface NoteImage {
 }
 
 export const AuthState = {
-  Loading: 'loading',
-  SignedOut: 'signed_out',
-  SignedIn: 'signed_in',
-  AwaitingConfirmation: 'awaiting_confirmation'
+  Loading: "loading",
+  SignedOut: "signed_out",
+  SignedIn: "signed_in",
+  AwaitingConfirmation: "awaiting_confirmation",
 } as const;
 
 export type AuthState = (typeof AuthState)[keyof typeof AuthState];
 
 export const ViewType = {
-  Note: 'note',
-  Calendar: 'calendar'
+  Note: "note",
+  Calendar: "calendar",
 } as const;
 
 export type ViewType = (typeof ViewType)[keyof typeof ViewType];
@@ -46,20 +46,20 @@ export interface UrlState {
 }
 
 export const DayCellState = {
-  Empty: 'empty',
-  Past: 'past',
-  Today: 'today',
-  Future: 'future'
+  Empty: "empty",
+  Past: "past",
+  Today: "today",
+  Future: "future",
 } as const;
 
 export type DayCellState = (typeof DayCellState)[keyof typeof DayCellState];
 
 export const SyncStatus = {
-  Idle: 'idle',
-  Syncing: 'syncing',
-  Synced: 'synced',
-  Offline: 'offline',
-  Error: 'error'
+  Idle: "idle",
+  Syncing: "syncing",
+  Synced: "synced",
+  Offline: "offline",
+  Error: "error",
 } as const;
 
 export type SyncStatus = (typeof SyncStatus)[keyof typeof SyncStatus];

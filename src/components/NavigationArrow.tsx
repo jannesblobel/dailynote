@@ -1,5 +1,7 @@
+import styles from "./NavigationArrow.module.css";
+
 interface NavigationArrowProps {
-  direction: 'left' | 'right';
+  direction: "left" | "right";
   onClick: () => void;
   disabled: boolean;
   ariaLabel: string;
@@ -11,17 +13,17 @@ export function NavigationArrow({
   onClick,
   disabled,
   ariaLabel,
-  className
+  className,
 }: NavigationArrowProps) {
   return (
     <button
-      className={`navigation-arrow navigation-arrow--${direction}${className ? ` ${className}` : ''}`}
+      className={[styles.arrow, className].filter(Boolean).join(" ")}
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
       type="button"
     >
-      {direction === 'left' ? '←' : '→'}
+      {direction === "left" ? "←" : "→"}
     </button>
   );
 }

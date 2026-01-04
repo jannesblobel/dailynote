@@ -1,6 +1,6 @@
-import { useEffect, useSyncExternalStore } from 'react';
-import App from '../App';
-import { Calendar } from './Calendar';
+import { useEffect, useSyncExternalStore } from "react";
+import App from "../App";
+import { Calendar } from "./Calendar";
 
 interface AppBootstrapProps {
   shouldHydrate: boolean;
@@ -27,8 +27,8 @@ const hydrationStore = (() => {
         return;
       }
       hydrated = true;
-      listeners.forEach(listener => listener());
-    }
+      listeners.forEach((listener) => listener());
+    },
   };
 })();
 
@@ -36,7 +36,7 @@ export function AppBootstrap({ shouldHydrate, year, now }: AppBootstrapProps) {
   const hydrated = useSyncExternalStore(
     hydrationStore.subscribe,
     hydrationStore.getSnapshot,
-    hydrationStore.getSnapshot
+    hydrationStore.getSnapshot,
   );
 
   useEffect(() => {

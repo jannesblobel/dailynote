@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { AppMode } from './useAppMode';
-import { migrateLegacyData } from '../storage/unifiedMigration';
+import { useEffect, useState } from "react";
+import { AppMode } from "./useAppMode";
+import { migrateLegacyData } from "../storage/unifiedMigration";
 
 interface UseUnifiedMigrationOptions {
   mode: AppMode;
@@ -20,7 +20,7 @@ export function useUnifiedMigration({
   targetKey,
   localKey,
   cloudKey,
-  triggerSync
+  triggerSync,
 }: UseUnifiedMigrationOptions): UseUnifiedMigrationReturn {
   const [isMigrating, setIsMigrating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -37,7 +37,7 @@ export function useUnifiedMigration({
         const migrated = await migrateLegacyData({
           targetKey,
           localKey,
-          cloudKey
+          cloudKey,
         });
 
         if (!cancelled && migrated && mode === AppMode.Cloud) {
@@ -46,10 +46,12 @@ export function useUnifiedMigration({
       } catch (caught) {
         if (!cancelled) {
           const error =
-            caught instanceof Error ? caught : new Error('Failed to migrate legacy data.');
+            caught instanceof Error
+              ? caught
+              : new Error("Failed to migrate legacy data.");
           setError(error);
         }
-        console.error('Unified migration error:', caught);
+        console.error("Unified migration error:", caught);
       } finally {
         if (!cancelled) {
           setIsMigrating(false);

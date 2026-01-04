@@ -1,11 +1,17 @@
-import type { Note } from '../types';
-import type { NoteRepository } from './noteRepository';
-import { sanitizeHtml } from '../utils/sanitize';
-import { base64ToBytes, bytesToBase64, decodeUtf8, encodeUtf8, randomBytes } from './cryptoUtils';
+import type { Note } from "../types";
+import type { NoteRepository } from "./noteRepository";
+import { sanitizeHtml } from "../utils/sanitize";
+import {
+  base64ToBytes,
+  bytesToBase64,
+  decodeUtf8,
+  encodeUtf8,
+  randomBytes,
+} from "./cryptoUtils";
 
 const NOTE_IV_BYTES = 12;
-const NOTES_DB_NAME = 'dailynotes-notes';
-const NOTES_STORE = 'notes';
+const NOTES_DB_NAME = "dailynotes-notes";
+const NOTES_STORE = "notes";
 
 interface EncryptedNotePayload {
   version: 1;
@@ -27,10 +33,12 @@ function openNotesDb(): Promise<IDBDatabase> {
   });
 }
 
-async function getNotePayload(date: string): Promise<EncryptedNotePayload | null> {
+async function getNotePayload(
+  date: string,
+): Promise<EncryptedNotePayload | null> {
   const db = await openNotesDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(NOTES_STORE, 'readonly');
+    const tx = db.transaction(NOTES_STORE, "readonly");
     const store = tx.objectStore(NOTES_STORE);
     const request = store.get(date);
     request.onsuccess = () => resolve(request.result ?? null);
@@ -43,10 +51,13 @@ async function getNotePayload(date: string): Promise<EncryptedNotePayload | null
   });
 }
 
-async function setNotePayload(date: string, payload: EncryptedNotePayload): Promise<void> {
+async function setNotePayload(
+  date: string,
+  payload: EncryptedNotePayload,
+): Promise<void> {
   const db = await openNotesDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(NOTES_STORE, 'readwrite');
+    const tx = db.transaction(NOTES_STORE, "readwrite");
     const store = tx.objectStore(NOTES_STORE);
     store.put(payload, date);
     tx.oncomplete = () => {
@@ -63,7 +74,7 @@ async function setNotePayload(date: string, payload: EncryptedNotePayload): Prom
 async function deleteNotePayload(date: string): Promise<void> {
   const db = await openNotesDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(NOTES_STORE, 'readwrite');
+    const tx = db.transaction(NOTES_STORE, "readwrite");
     const store = tx.objectStore(NOTES_STORE);
     store.delete(date);
     tx.oncomplete = () => {
@@ -80,10 +91,10 @@ async function deleteNotePayload(date: string): Promise<void> {
 async function getAllNoteDates(): Promise<string[]> {
   const db = await openNotesDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(NOTES_STORE, 'readonly');
+    const tx = db.transaction(NOTES_STORE, "readonly");
     const store = tx.objectStore(NOTES_STORE);
     const request = store.getAllKeys();
-    request.onsuccess = () => resolve(request.result.map(key => String(key)));
+    request.onsuccess = () => resolve(request.result.map((key) => String(key)));
     request.onerror = () => reject(request.error);
     tx.oncomplete = () => db.close();
     tx.onerror = () => {
@@ -95,39 +106,41 @@ async function getAllNoteDates(): Promise<string[]> {
 
 async function encryptNotePayload(
   vaultKey: CryptoKey,
-  note: Note
+  note: Note,
 ): Promise<EncryptedNotePayload> {
   const iv = randomBytes(NOTE_IV_BYTES);
   const plaintext = encodeUtf8(JSON.stringify(note));
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: "AES-GCM", iv },
     vaultKey,
-    plaintext
+    plaintext,
   );
   return {
     version: 1,
     iv: bytesToBase64(iv),
-    data: bytesToBase64(new Uint8Array(ciphertext))
+    data: bytesToBase64(new Uint8Array(ciphertext)),
   };
 }
 
 async function decryptNotePayload(
   vaultKey: CryptoKey,
-  payload: EncryptedNotePayload
+  payload: EncryptedNotePayload,
 ): Promise<Note> {
   const iv = base64ToBytes(payload.iv);
   const ciphertext = base64ToBytes(payload.data);
   const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
+    { name: "AES-GCM", iv },
     vaultKey,
-    ciphertext
+    ciphertext,
   );
   const note = JSON.parse(decodeUtf8(new Uint8Array(decrypted))) as Note;
   note.content = sanitizeHtml(note.content);
   return note;
 }
 
-export function createEncryptedNoteRepository(vaultKey: CryptoKey): NoteRepository {
+export function createEncryptedNoteRepository(
+  vaultKey: CryptoKey,
+): NoteRepository {
   return {
     async get(date: string): Promise<Note | null> {
       try {
@@ -144,7 +157,7 @@ export function createEncryptedNoteRepository(vaultKey: CryptoKey): NoteReposito
       const note: Note = {
         date,
         content: sanitizedContent,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
       const payload = await encryptNotePayload(vaultKey, note);
       await setNotePayload(date, payload);
@@ -156,6 +169,6 @@ export function createEncryptedNoteRepository(vaultKey: CryptoKey): NoteReposito
 
     async getAllDates(): Promise<string[]> {
       return getAllNoteDates();
-    }
+    },
   };
 }

@@ -9,7 +9,7 @@ const URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>"']+(?=\s|$)/gi;
  * Checks if a string looks like a URL
  */
 export function isUrl(text: string): boolean {
-  const pattern = new RegExp(URL_PATTERN.source, 'gi');
+  const pattern = new RegExp(URL_PATTERN.source, "gi");
   return pattern.test(text);
 }
 
@@ -17,16 +17,18 @@ export function isUrl(text: string): boolean {
  * Finds URL matches in text and returns their positions.
  * Only matches URLs that are followed by whitespace or end of string.
  */
-export function findUrls(text: string): Array<{ url: string; start: number; end: number }> {
+export function findUrls(
+  text: string,
+): Array<{ url: string; start: number; end: number }> {
   const matches: Array<{ url: string; start: number; end: number }> = [];
-  const pattern = new RegExp(URL_PATTERN.source, 'gi');
+  const pattern = new RegExp(URL_PATTERN.source, "gi");
   let match;
 
   while ((match = pattern.exec(text)) !== null) {
     matches.push({
       url: match[0],
       start: match.index,
-      end: match.index + match[0].length
+      end: match.index + match[0].length,
     });
   }
 
@@ -37,7 +39,7 @@ export function findUrls(text: string): Array<{ url: string; start: number; end:
  * Normalizes a URL by adding https:// if it starts with www.
  */
 export function normalizeUrl(url: string): string {
-  if (url.startsWith('www.')) {
+  if (url.startsWith("www.")) {
     return `https://${url}`;
   }
   return url;
@@ -47,11 +49,11 @@ export function normalizeUrl(url: string): string {
  * Creates an anchor element for a URL
  */
 export function createLinkElement(url: string): HTMLAnchorElement {
-  const anchor = document.createElement('a');
+  const anchor = document.createElement("a");
   anchor.href = normalizeUrl(url);
   anchor.textContent = url;
-  anchor.target = '_blank';
-  anchor.rel = 'noopener noreferrer';
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
   return anchor;
 }
 
@@ -60,7 +62,7 @@ export function createLinkElement(url: string): HTMLAnchorElement {
  * If no URLs found, returns null (no replacement needed).
  */
 export function linkifyTextNode(textNode: Text): Node[] | null {
-  const text = textNode.textContent ?? '';
+  const text = textNode.textContent ?? "";
   const urls = findUrls(text);
 
   if (urls.length === 0) {
@@ -95,7 +97,7 @@ export function linkifyTextNode(textNode: Text): Node[] | null {
 function isInsideAnchor(node: Node): boolean {
   let current: Node | null = node;
   while (current) {
-    if (current.nodeName === 'A') {
+    if (current.nodeName === "A") {
       return true;
     }
     current = current.parentNode;
@@ -109,25 +111,21 @@ function isInsideAnchor(node: Node): boolean {
  * Returns true if any changes were made.
  */
 export function linkifyElement(element: HTMLElement): boolean {
-  const walker = document.createTreeWalker(
-    element,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode: (node) => {
-        // Skip if inside an anchor
-        if (isInsideAnchor(node)) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        // Skip if no URLs in text
-        const text = node.textContent ?? '';
-        const pattern = new RegExp(URL_PATTERN.source, 'gi');
-        if (!pattern.test(text)) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        return NodeFilter.FILTER_ACCEPT;
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => {
+      // Skip if inside an anchor
+      if (isInsideAnchor(node)) {
+        return NodeFilter.FILTER_REJECT;
       }
-    }
-  );
+      // Skip if no URLs in text
+      const text = node.textContent ?? "";
+      const pattern = new RegExp(URL_PATTERN.source, "gi");
+      if (!pattern.test(text)) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
 
   const textNodes: Text[] = [];
   let node;

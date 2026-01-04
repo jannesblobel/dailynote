@@ -1,22 +1,27 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { base64ToBytes } from './cryptoUtils';
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { base64ToBytes } from "./cryptoUtils";
 import {
   deleteImageRecords,
   getAllImageMeta,
   getImageRecord,
-  storeImageAndMeta
-} from './unifiedImageStore';
-import type { ImageMetaRecord, ImageRecord } from './unifiedDb';
+  storeImageAndMeta,
+} from "./unifiedImageStore";
+import type { ImageMetaRecord, ImageRecord } from "./unifiedDb";
 
-const IMAGE_BUCKET = 'note-images';
+const IMAGE_BUCKET = "note-images";
 
-function buildStoragePath(userId: string, noteDate: string, imageId: string, suffix: string): string {
+function buildStoragePath(
+  userId: string,
+  noteDate: string,
+  imageId: string,
+  suffix: string,
+): string {
   return `${userId}/${noteDate}/${imageId}${suffix}`;
 }
 
 function cipherRecordToBlob(record: ImageRecord): Blob {
   const bytes = base64ToBytes(record.ciphertext);
-  return new Blob([bytes], { type: 'application/octet-stream' });
+  return new Blob([bytes], { type: "application/octet-stream" });
 }
 
 async function upsertImageMetadata(
@@ -24,7 +29,7 @@ async function upsertImageMetadata(
   userId: string,
   meta: ImageMetaRecord,
   record: ImageRecord,
-  ciphertextPath: string
+  ciphertextPath: string,
 ): Promise<{ serverUpdatedAt: string }> {
   const payload = {
     id: meta.id,
@@ -40,44 +45,46 @@ async function upsertImageMetadata(
     storage_path: ciphertextPath,
     sha256: meta.sha256,
     nonce: record.nonce,
-    key_id: meta.keyId ?? 'legacy',
-    deleted: false
+    key_id: meta.keyId ?? "legacy",
+    deleted: false,
   };
 
   const { data, error } = await supabase
-    .from('note_images')
+    .from("note_images")
     .upsert(payload)
-    .select('server_updated_at')
+    .select("server_updated_at")
     .single();
 
   if (error) throw error;
   return {
-    serverUpdatedAt: String((data as { server_updated_at: string }).server_updated_at)
+    serverUpdatedAt: String(
+      (data as { server_updated_at: string }).server_updated_at,
+    ),
   };
 }
 
 async function markImageDeleted(
   supabase: SupabaseClient,
-  imageId: string
+  imageId: string,
 ): Promise<void> {
   const { error } = await supabase
-    .from('note_images')
+    .from("note_images")
     .update({ deleted: true })
-    .eq('id', imageId);
+    .eq("id", imageId);
 
   if (error) throw error;
 }
 
 export async function syncEncryptedImages(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
 ): Promise<void> {
   const metas = await getAllImageMeta();
 
   for (const meta of metas) {
     if (!meta.pendingOp) continue;
 
-    if (meta.pendingOp === 'delete') {
+    if (meta.pendingOp === "delete") {
       if (meta.remotePath) {
         await supabase.storage.from(IMAGE_BUCKET).remove([meta.remotePath]);
       }
@@ -89,12 +96,20 @@ export async function syncEncryptedImages(
     const record = await getImageRecord(meta.id);
     if (!record) continue;
 
-    const ciphertextPath = buildStoragePath(userId, meta.noteDate, meta.id, '.enc');
+    const ciphertextPath = buildStoragePath(
+      userId,
+      meta.noteDate,
+      meta.id,
+      ".enc",
+    );
     const blob = cipherRecordToBlob(record);
 
     const { error: uploadError } = await supabase.storage
       .from(IMAGE_BUCKET)
-      .upload(ciphertextPath, blob, { upsert: true, contentType: 'application/octet-stream' });
+      .upload(ciphertextPath, blob, {
+        upsert: true,
+        contentType: "application/octet-stream",
+      });
 
     if (uploadError) throw uploadError;
 
@@ -103,17 +118,14 @@ export async function syncEncryptedImages(
       userId,
       meta,
       record,
-      ciphertextPath
+      ciphertextPath,
     );
 
-    await storeImageAndMeta(
-      record,
-      {
-        ...meta,
-        remotePath: ciphertextPath,
-        serverUpdatedAt,
-        pendingOp: null
-      }
-    );
+    await storeImageAndMeta(record, {
+      ...meta,
+      remotePath: ciphertextPath,
+      serverUpdatedAt,
+      pendingOp: null,
+    });
   }
 }

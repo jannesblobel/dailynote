@@ -1,11 +1,11 @@
-import { useMemo, useCallback } from 'react';
-import { getTodayString } from '../utils/date';
+import { useMemo, useCallback } from "react";
+import { getTodayString } from "../utils/date";
 import {
   getNavigableDates,
   getPreviousDate,
   getNextDate,
-  getNavigationBoundaries
-} from '../utils/noteNavigation';
+  getNavigationBoundaries,
+} from "../utils/noteNavigation";
 
 interface UseNoteNavigationProps {
   currentDate: string | null;
@@ -24,14 +24,14 @@ interface UseNoteNavigationReturn {
 export function useNoteNavigation({
   currentDate,
   noteDates,
-  onNavigate
+  onNavigate,
 }: UseNoteNavigationProps): UseNoteNavigationReturn {
   const todayStr = getTodayString();
 
   // Compute navigable dates (expensive sort operation)
   const navigableDates = useMemo(
     () => getNavigableDates(noteDates, todayStr),
-    [noteDates, todayStr]
+    [noteDates, todayStr],
   );
 
   // Compute boundary flags
@@ -44,7 +44,7 @@ export function useNoteNavigation({
 
     return {
       canNavigatePrev: !boundaries.isAtStart,
-      canNavigateNext: !boundaries.isAtEnd
+      canNavigateNext: !boundaries.isAtEnd,
     };
   }, [currentDate, navigableDates]);
 
@@ -72,6 +72,6 @@ export function useNoteNavigation({
     canNavigateNext,
     navigateToPrevious,
     navigateToNext,
-    navigableDates
+    navigableDates,
   };
 }

@@ -1,4 +1,4 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export interface UserKeys {
   wrappedDek: string;
@@ -19,16 +19,16 @@ interface UserKeysRow {
 
 export async function fetchUserKeys(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
 ): Promise<UserKeys | null> {
   const { data, error } = await supabase
-    .from('user_keys')
-    .select('*')
-    .eq('user_id', userId)
+    .from("user_keys")
+    .select("*")
+    .eq("user_id", userId)
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') {
+    if (error.code === "PGRST116") {
       // No rows found
       return null;
     }
@@ -41,22 +41,22 @@ export async function fetchUserKeys(
     dekIv: row.dek_iv,
     kdfSalt: row.kdf_salt,
     kdfIterations: row.kdf_iterations,
-    version: row.version
+    version: row.version,
   };
 }
 
 export async function saveUserKeys(
   supabase: SupabaseClient,
   userId: string,
-  keys: UserKeys
+  keys: UserKeys,
 ): Promise<void> {
-  const { error } = await supabase.from('user_keys').upsert({
+  const { error } = await supabase.from("user_keys").upsert({
     user_id: userId,
     wrapped_dek: keys.wrappedDek,
     dek_iv: keys.dekIv,
     kdf_salt: keys.kdfSalt,
     kdf_iterations: keys.kdfIterations,
-    version: keys.version
+    version: keys.version,
   });
 
   if (error) {

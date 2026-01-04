@@ -1,6 +1,6 @@
-import type { ImageRepository } from '../storage/imageRepository';
+import type { ImageRepository } from "../storage/imageRepository";
 
-type UrlKind = 'blob' | 'remote';
+type UrlKind = "blob" | "remote";
 
 interface UrlEntry {
   url: string;
@@ -83,9 +83,9 @@ export class ImageUrlManager {
     if (remoteUrl) {
       return {
         url: remoteUrl,
-        kind: 'remote',
+        kind: "remote",
         owners: new Set(),
-        expiresAt: Date.now() + this.remoteTtlMs
+        expiresAt: Date.now() + this.remoteTtlMs,
       };
     }
 
@@ -96,8 +96,8 @@ export class ImageUrlManager {
 
     return {
       url: URL.createObjectURL(blob),
-      kind: 'blob',
-      owners: new Set()
+      kind: "blob",
+      owners: new Set(),
     };
   }
 
@@ -117,14 +117,14 @@ export class ImageUrlManager {
     if (!entry) return;
     entry.owners.delete(ownerId);
     if (entry.owners.size) return;
-    if (entry.kind === 'blob') {
+    if (entry.kind === "blob") {
       URL.revokeObjectURL(entry.url);
     }
     this.urlCache.delete(imageId);
   }
 
   private isExpired(entry: UrlEntry): boolean {
-    if (entry.kind !== 'remote' || !entry.expiresAt) {
+    if (entry.kind !== "remote" || !entry.expiresAt) {
       return false;
     }
     return Date.now() > entry.expiresAt;

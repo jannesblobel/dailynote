@@ -1,19 +1,34 @@
-import { defineConfig } from 'vite'
-import { execSync } from 'node:child_process'
-import react from '@vitejs/plugin-react'
-import { sriPlugin } from './viteSriPlugin'
+import { defineConfig } from "vite";
+import { execSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { basename } from "node:path";
+import react from "@vitejs/plugin-react";
+import { sriPlugin } from "./viteSriPlugin";
 
 const commitHash = (() => {
   try {
-    return execSync('git rev-parse --short HEAD').toString().trim()
+    return execSync("git rev-parse --short HEAD").toString().trim();
   } catch {
-    return 'unknown'
+    return "unknown";
   }
-})()
+})();
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), sriPlugin()],
+  css: {
+    modules: {
+      generateScopedName: (name, filename) => {
+        const fileBase = basename(filename).replace(/\.module\.[^.]+$/, "");
+        const hash = createHash("md5")
+          .update(`${filename}:${name}`)
+          .digest("base64")
+          .replace(/[^a-zA-Z0-9]/g, "")
+          .slice(0, 5);
+        return `${fileBase}__${name}___${hash}`;
+      },
+    },
+  },
   define: {
     __COMMIT_HASH__: JSON.stringify(commitHash),
   },
@@ -22,13 +37,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
+          "react-vendor": ["react", "react-dom"],
         },
       },
     },
     // Generate sourcemaps for production debugging (optional)
     sourcemap: false,
     // Use esbuild for fast minification (default)
-    minify: 'esbuild',
+    minify: "esbuild",
   },
-})
+});

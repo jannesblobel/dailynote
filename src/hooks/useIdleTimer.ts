@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 interface UseIdleTimerOptions {
   onIdle: () => void;
@@ -6,7 +6,11 @@ interface UseIdleTimerOptions {
   enabled?: boolean;
 }
 
-export function useIdleTimer({ onIdle, delay, enabled = true }: UseIdleTimerOptions) {
+export function useIdleTimer({
+  onIdle,
+  delay,
+  enabled = true,
+}: UseIdleTimerOptions) {
   const timeoutRef = useRef<number | null>(null);
   const onIdleRef = useRef(onIdle);
 

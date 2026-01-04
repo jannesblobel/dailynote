@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
-import { MonthGrid } from './MonthGrid';
-import { Button } from '../Button';
-import { SyncIndicator } from '../SyncIndicator';
-import type { SyncStatus } from '../../types';
-import type { PendingOpsSummary } from '../../domain/sync';
+import { useEffect, useRef } from "react";
+import { CalendarHeader } from "./CalendarHeader";
+import { CalendarGrid } from "./CalendarGrid";
+import type { SyncStatus } from "../../types";
+import type { PendingOpsSummary } from "../../domain/sync";
+import styles from "./Calendar.module.css";
 
 interface CalendarProps {
   year: number;
@@ -26,9 +26,8 @@ export function Calendar({
   pendingOps,
   onSignIn,
   onSignOut,
-  now
+  now,
 }: CalendarProps) {
-  const months = Array.from({ length: 12 }, (_, i) => i);
   const hasAutoScrolledRef = useRef(false);
   const commitHash = __COMMIT_HASH__;
   const commitUrl = `https://github.com/katspaugh/dailynote/commit/${commitHash}`;
@@ -47,73 +46,37 @@ export function Calendar({
       return;
     }
 
-    if (!window.matchMedia('(max-width: 768px)').matches) {
+    if (!window.matchMedia("(max-width: 768px)").matches) {
       return;
     }
 
-    const currentMonthEl = document.querySelector('[data-current-month="true"]');
+    const currentMonthEl = document.querySelector(
+      '[data-current-month="true"]',
+    );
     if (currentMonthEl instanceof HTMLElement) {
-      currentMonthEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      currentMonthEl.scrollIntoView({ block: "start", behavior: "smooth" });
       hasAutoScrolledRef.current = true;
     }
   }, [year]);
 
   return (
-    <div className="calendar">
-      <div className="calendar__header">
-        <a
-          className="calendar__auth calendar__header-commit"
-          href={commitUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <span className="calendar__footer-icon" aria-hidden="true" />
-          {commitHash}
-        </a>
-        <div className="calendar__header-spacer" aria-hidden="true" />
-        <div className="calendar__header-actions">
-          {syncStatus && <SyncIndicator status={syncStatus} pendingOps={pendingOps} />}
-          {onSignIn && (
-            <button className="calendar__auth" onClick={onSignIn}>
-              Sign in to sync
-            </button>
-          )}
-          {onSignOut && (
-            <button className="calendar__auth" onClick={onSignOut}>
-              Sign out
-            </button>
-          )}
-        </div>
-        <div className="calendar__year-controls">
-          <Button
-            icon
-            onClick={() => onYearChange(year - 1)}
-            aria-label="Previous year"
-          >
-            ←
-          </Button>
-          <span className="calendar__year">{year}</span>
-          <Button
-            icon
-            onClick={() => onYearChange(year + 1)}
-            aria-label="Next year"
-          >
-            →
-          </Button>
-        </div>
-      </div>
-      <div className="calendar__grid">
-        {months.map(month => (
-          <MonthGrid
-            key={month}
-            year={year}
-            month={month}
-            hasNote={hasNote}
-            onDayClick={onDayClick}
-            now={now}
-          />
-        ))}
-      </div>
+    <div className={styles.calendar}>
+      <CalendarHeader
+        year={year}
+        commitHash={commitHash}
+        commitUrl={commitUrl}
+        onYearChange={onYearChange}
+        syncStatus={syncStatus}
+        pendingOps={pendingOps}
+        onSignIn={onSignIn}
+        onSignOut={onSignOut}
+      />
+      <CalendarGrid
+        year={year}
+        hasNote={hasNote}
+        onDayClick={onDayClick}
+        now={now}
+      />
     </div>
   );
 }

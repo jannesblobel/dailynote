@@ -1,6 +1,9 @@
-import { Modal } from '../Modal';
-import { AuthForm } from '../AuthForm';
-import { AuthState } from '../../types';
+import { Modal } from "../Modal";
+import { Button } from "../Button";
+import { AuthForm } from "../AuthForm";
+import { VaultPanel } from "../VaultPanel";
+import { AuthState } from "../../types";
+import styles from "../VaultPanel/VaultPanel.module.css";
 
 interface CloudAuthModalProps {
   isOpen: boolean;
@@ -10,6 +13,7 @@ interface CloudAuthModalProps {
   isBusy: boolean;
   error: string | null;
   localPassword: string | null;
+  onDismiss: () => void;
   onBackToSignIn: () => void;
   onSignIn: (email: string, password: string) => Promise<void>;
   onSignUp: (email: string, password: string) => Promise<void>;
@@ -23,34 +27,36 @@ export function CloudAuthModal({
   isBusy,
   error,
   localPassword,
+  onDismiss,
   onBackToSignIn,
   onSignIn,
-  onSignUp
+  onSignUp,
 }: CloudAuthModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={() => {}} variant="overlay">
+    <Modal isOpen={isOpen} onClose={onDismiss}>
       {isSigningIn ? (
-        <div className="vault-unlock">
-          <div className="vault-unlock__card">
-            <div className="note-loading">Signing in...</div>
-          </div>
-        </div>
+        <VaultPanel>
+          <div className={styles.loading}>Signing in...</div>
+        </VaultPanel>
       ) : authState === AuthState.AwaitingConfirmation ? (
-        <div className="vault-unlock">
-          <div className="vault-unlock__card">
-            <h2 className="vault-unlock__title">Check your email</h2>
-            <p className="vault-unlock__helper">
-              We sent a confirmation link to <strong>{confirmationEmail}</strong>.
-              Click the link to activate your account.
-            </p>
-            <button
-              className="button button--primary vault-unlock__button"
-              onClick={onBackToSignIn}
-            >
-              Back to sign in
-            </button>
-          </div>
-        </div>
+        <VaultPanel
+          title="Check your email"
+          helper={
+            <>
+              We sent a confirmation link to{" "}
+              <strong>{confirmationEmail}</strong>. Click the link to activate
+              your account.
+            </>
+          }
+        >
+          <Button
+            className={styles.actionButton}
+            variant="primary"
+            onClick={onBackToSignIn}
+          >
+            Back to sign in
+          </Button>
+        </VaultPanel>
       ) : (
         <AuthForm
           isBusy={isBusy}

@@ -1,17 +1,17 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { NoteImage } from '../types';
-import type { ImageRepository } from './imageRepository';
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { NoteImage } from "../types";
+import type { ImageRepository } from "./imageRepository";
 
-const BUCKET_NAME = 'note-images';
+const BUCKET_NAME = "note-images";
 const SIGNED_URL_EXPIRY = 60 * 60; // 1 hour in seconds
 
 /**
  * Generate a UUID v4
  */
 function generateUuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
@@ -21,15 +21,15 @@ function generateUuid(): string {
  */
 function getExtension(mimeType: string): string {
   const map: Record<string, string> = {
-    'image/jpeg': 'jpg',
-    'image/jpg': 'jpg',
-    'image/png': 'png',
-    'image/gif': 'gif',
-    'image/webp': 'webp',
-    'image/svg+xml': 'svg'
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/gif": "gif",
+    "image/webp": "webp",
+    "image/svg+xml": "svg",
   };
 
-  return map[mimeType] || 'jpg';
+  return map[mimeType] || "jpg";
 }
 
 /**
@@ -42,15 +42,15 @@ function getExtension(mimeType: string): string {
  */
 export function createCloudImageRepository(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
 ): ImageRepository {
   return {
     async upload(
       noteDate: string,
       file: Blob,
-      type: 'background' | 'inline',
+      type: "background" | "inline",
       filename: string,
-      options?: { width?: number; height?: number }
+      options?: { width?: number; height?: number },
     ): Promise<NoteImage> {
       const imageId = generateUuid();
       const ext = getExtension(file.type);
@@ -61,7 +61,7 @@ export function createCloudImageRepository(
         .from(BUCKET_NAME)
         .upload(storagePath, file, {
           contentType: file.type,
-          upsert: false
+          upsert: false,
         });
 
       if (uploadError) {
@@ -78,23 +78,21 @@ export function createCloudImageRepository(
         width: options?.width ?? 0,
         height: options?.height ?? 0,
         size: file.size,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
-      const { error: metaError } = await supabase
-        .from('note_images')
-        .insert({
-          id: meta.id,
-          user_id: userId,
-          note_date: meta.noteDate,
-          type: meta.type,
-          filename: meta.filename,
-          mime_type: meta.mimeType,
-          width: meta.width,
-          height: meta.height,
-          size: meta.size,
-          storage_path: storagePath
-        });
+      const { error: metaError } = await supabase.from("note_images").insert({
+        id: meta.id,
+        user_id: userId,
+        note_date: meta.noteDate,
+        type: meta.type,
+        filename: meta.filename,
+        mime_type: meta.mimeType,
+        width: meta.width,
+        height: meta.height,
+        size: meta.size,
+        storage_path: storagePath,
+      });
 
       if (metaError) {
         // Clean up uploaded file on metadata insert failure
@@ -109,10 +107,10 @@ export function createCloudImageRepository(
       try {
         // Get metadata to find storage path
         const { data: meta, error: metaError } = await supabase
-          .from('note_images')
-          .select('storage_path, mime_type')
-          .eq('id', imageId)
-          .eq('user_id', userId)
+          .from("note_images")
+          .select("storage_path, mime_type")
+          .eq("id", imageId)
+          .eq("user_id", userId)
           .single();
 
         if (metaError || !meta) {
@@ -138,10 +136,10 @@ export function createCloudImageRepository(
       try {
         // Get metadata to find storage path
         const { data: meta, error: metaError } = await supabase
-          .from('note_images')
-          .select('storage_path')
-          .eq('id', imageId)
-          .eq('user_id', userId)
+          .from("note_images")
+          .select("storage_path")
+          .eq("id", imageId)
+          .eq("user_id", userId)
           .single();
 
         if (metaError || !meta) {
@@ -166,10 +164,10 @@ export function createCloudImageRepository(
     async delete(imageId: string): Promise<void> {
       // Get metadata to find storage path
       const { data: meta, error: metaError } = await supabase
-        .from('note_images')
-        .select('storage_path')
-        .eq('id', imageId)
-        .eq('user_id', userId)
+        .from("note_images")
+        .select("storage_path")
+        .eq("id", imageId)
+        .eq("user_id", userId)
         .single();
 
       if (metaError || !meta) {
@@ -181,24 +179,24 @@ export function createCloudImageRepository(
 
       // Delete metadata
       await supabase
-        .from('note_images')
+        .from("note_images")
         .delete()
-        .eq('id', imageId)
-        .eq('user_id', userId);
+        .eq("id", imageId)
+        .eq("user_id", userId);
     },
 
     async getByNoteDate(noteDate: string): Promise<NoteImage[]> {
       const { data, error } = await supabase
-        .from('note_images')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('note_date', noteDate);
+        .from("note_images")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("note_date", noteDate);
 
       if (error || !data) {
         return [];
       }
 
-      return data.map(row => ({
+      return data.map((row) => ({
         id: row.id,
         noteDate: row.note_date,
         type: row.type,
@@ -207,7 +205,7 @@ export function createCloudImageRepository(
         width: row.width || 0,
         height: row.height || 0,
         size: row.size || 0,
-        createdAt: row.created_at
+        createdAt: row.created_at,
       }));
     },
 
@@ -216,7 +214,7 @@ export function createCloudImageRepository(
       const images = await this.getByNoteDate(noteDate);
 
       // Delete each image
-      await Promise.all(images.map(img => this.delete(img.id)));
-    }
+      await Promise.all(images.map((img) => this.delete(img.id)));
+    },
   };
 }

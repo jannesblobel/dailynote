@@ -3,5 +3,5 @@ export {
   unlockCloudVault,
   getHasLocalVault,
   bootstrapLocalVault,
-  unlockLocalVault
-} from '../../services/vaultService';
+  unlockLocalVault,
+} from "../../services/vaultService";

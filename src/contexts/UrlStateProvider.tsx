@@ -1,6 +1,6 @@
-import { type ReactNode } from 'react';
-import { UrlStateContext } from './urlStateContext';
-import type { UrlState } from '../hooks/useUrlState';
+import { type ReactNode } from "react";
+import { UrlStateContext } from "./urlStateContext";
+import type { UrlState } from "../hooks/useUrlState";
 
 interface UrlStateProviderProps {
   value: UrlState;

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 import {
   bootstrapLocalVault,
   getHasLocalVault,
-  unlockLocalVault
-} from '../domain/vault';
+  unlockLocalVault,
+} from "../domain/vault";
 
 export interface UseLocalVaultReturn {
   vaultKey: CryptoKey | null;
@@ -14,6 +14,7 @@ export interface UseLocalVaultReturn {
   isBusy: boolean;
   error: string | null;
   unlock: (password: string) => Promise<boolean>;
+  clearError: () => void;
 }
 
 export function useLocalVault(): UseLocalVaultReturn {
@@ -40,7 +41,7 @@ export function useLocalVault(): UseLocalVaultReturn {
         }
       } catch {
         if (!cancelled) {
-          setError('Unable to initialize local vault.');
+          setError("Unable to initialize local vault.");
           setIsReady(true);
         }
       }
@@ -52,29 +53,36 @@ export function useLocalVault(): UseLocalVaultReturn {
     };
   }, []);
 
-  const unlock = useCallback(async (password: string): Promise<boolean> => {
-    if (!password.trim()) {
-      setError('Please enter a password.');
-      return false;
-    }
+  const unlock = useCallback(
+    async (password: string): Promise<boolean> => {
+      if (!password.trim()) {
+        setError("Please enter a password.");
+        return false;
+      }
 
-    setIsBusy(true);
+      setIsBusy(true);
+      setError(null);
+
+      try {
+        const result = await unlockLocalVault({ password, hasVault });
+        setVaultKey(result.vaultKey);
+        setHasVault(result.hasVault);
+        setRequiresPassword(false);
+        return true;
+      } catch {
+        setError("Unable to unlock. Check your password and try again.");
+        return false;
+      } finally {
+        setIsBusy(false);
+        setIsReady(true);
+      }
+    },
+    [hasVault],
+  );
+
+  const clearError = useCallback(() => {
     setError(null);
-
-    try {
-      const result = await unlockLocalVault({ password, hasVault });
-      setVaultKey(result.vaultKey);
-      setHasVault(result.hasVault);
-      setRequiresPassword(false);
-      return true;
-    } catch {
-      setError('Unable to unlock. Check your password and try again.');
-      return false;
-    } finally {
-      setIsBusy(false);
-      setIsReady(true);
-    }
-  }, [hasVault]);
+  }, []);
 
   return {
     vaultKey,
@@ -84,6 +92,7 @@ export function useLocalVault(): UseLocalVaultReturn {
     requiresPassword,
     isBusy,
     error,
-    unlock
+    unlock,
+    clearError,
   };
 }

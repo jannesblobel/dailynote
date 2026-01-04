@@ -1,6 +1,6 @@
-import type { UnifiedSyncedNoteRepository } from '../storage/unifiedSyncedNoteRepository';
-import { getAllNoteMeta } from '../storage/unifiedNoteStore';
-import { getAllImageMeta } from '../storage/unifiedImageStore';
+import type { UnifiedSyncedNoteRepository } from "../storage/unifiedSyncedNoteRepository";
+import { getAllNoteMeta } from "../storage/unifiedNoteStore";
+import { getAllImageMeta } from "../storage/unifiedImageStore";
 
 export interface PendingOpsSummary {
   notes: number;
@@ -11,14 +11,14 @@ export interface PendingOpsSummary {
 export async function getPendingOpsSummary(): Promise<PendingOpsSummary> {
   const [noteMeta, imageMeta] = await Promise.all([
     getAllNoteMeta(),
-    getAllImageMeta()
+    getAllImageMeta(),
   ]);
-  const notes = noteMeta.filter(meta => meta.pendingOp).length;
-  const images = imageMeta.filter(meta => meta.pendingOp).length;
+  const notes = noteMeta.filter((meta) => meta.pendingOp).length;
+  const images = imageMeta.filter((meta) => meta.pendingOp).length;
   return {
     notes,
     images,
-    total: notes + images
+    total: notes + images,
   };
 }
 
@@ -38,7 +38,7 @@ const DEFAULT_DEBOUNCE_MS = 2000;
 const DEFAULT_IDLE_DELAY_MS = 4000;
 
 export function createSyncService(
-  repository: UnifiedSyncedNoteRepository
+  repository: UnifiedSyncedNoteRepository,
 ): SyncService {
   let debounceTimer: number | null = null;
   let idleTimer: number | null = null;
@@ -113,6 +113,6 @@ export function createSyncService(
     queueSync,
     syncNow: runSyncLoop,
     queueIdleSync,
-    dispose
+    dispose,
   };
 }

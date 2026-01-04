@@ -1,1 +1,1 @@
-export { SyncIndicator } from './SyncIndicator';
+export { SyncIndicator } from "./SyncIndicator";

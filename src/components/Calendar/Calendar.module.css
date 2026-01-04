@@ -1,0 +1,164 @@
+.calendar {
+  padding: var(--spacing-xl);
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 100vh;
+  min-height: 800px;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  position: relative;
+}
+
+.yearControls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.headerSpacer {
+  flex: 1;
+  display: none;
+}
+
+.year {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  min-width: 120px;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-xl);
+  flex: 1;
+  align-content: start;
+}
+
+.footerIcon {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  background-color: currentColor;
+  mask-image: url("/github.svg");
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-image: url("/github.svg");
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+
+.headerCommit {
+  position: absolute;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  position: absolute;
+  right: 0;
+}
+
+.auth {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+}
+
+.auth:hover {
+  color: var(--color-text);
+  background-color: var(--color-surface);
+}
+
+@media (max-width: 1200px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-lg);
+  }
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+  }
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+}
+
+@media (min-width: 1200px) {
+  .calendar {
+    padding: var(--spacing-md);
+    box-sizing: border-box;
+  }
+
+  .header {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .year {
+    font-size: var(--font-size-xl);
+    min-width: 100px;
+  }
+
+  .grid {
+    grid-template-rows: repeat(3, 1fr);
+    gap: var(--spacing-md);
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    justify-content: flex-start;
+  }
+
+  .yearControls {
+    width: 100%;
+    justify-content: center;
+    order: 1;
+  }
+
+  .headerActions {
+    position: static;
+    width: auto;
+    justify-content: flex-start;
+    order: -1;
+  }
+
+  .headerCommit {
+    position: static;
+    order: -1;
+  }
+
+  .headerSpacer {
+    display: block;
+    order: -1;
+  }
+}

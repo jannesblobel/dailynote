@@ -1,14 +1,14 @@
-import { useEffect, useReducer } from 'react';
-import { AppMode } from './useAppMode';
-import { AuthState } from '../types';
+import { useEffect, useReducer } from "react";
+import { AppMode } from "./useAppMode";
+import { AuthState } from "../types";
 
 export type VaultUiState =
-  | 'intro'
-  | 'modeChoice'
-  | 'localVault'
-  | 'cloudAuth'
-  | 'vaultError'
-  | 'none';
+  | "intro"
+  | "modeChoice"
+  | "localVault"
+  | "cloudAuth"
+  | "vaultError"
+  | "none";
 
 interface VaultUiInputs {
   showIntro: boolean;
@@ -24,15 +24,15 @@ interface VaultUiInputs {
 }
 
 function deriveUiState(inputs: VaultUiInputs): VaultUiState {
-  if (inputs.showIntro) return 'intro';
-  if (inputs.isModeChoiceOpen) return 'modeChoice';
+  if (inputs.showIntro) return "intro";
+  if (inputs.isModeChoiceOpen) return "modeChoice";
   if (
     inputs.mode === AppMode.Local &&
     inputs.isVaultLocked &&
     inputs.localVaultReady &&
     inputs.localRequiresPassword
   ) {
-    return 'localVault';
+    return "localVault";
   }
   if (
     inputs.mode === AppMode.Cloud &&
@@ -40,22 +40,22 @@ function deriveUiState(inputs: VaultUiInputs): VaultUiState {
       inputs.authState === AuthState.AwaitingConfirmation ||
       inputs.isSigningIn)
   ) {
-    return 'cloudAuth';
+    return "cloudAuth";
   }
   if (inputs.vaultError && inputs.isVaultReady) {
-    return 'vaultError';
+    return "vaultError";
   }
-  return 'none';
+  return "none";
 }
 
-type VaultUiAction = { type: 'sync'; payload: VaultUiInputs };
+type VaultUiAction = { type: "sync"; payload: VaultUiInputs };
 
 function reducer(_state: VaultUiState, action: VaultUiAction): VaultUiState {
   switch (action.type) {
-    case 'sync':
+    case "sync":
       return deriveUiState(action.payload);
     default:
-      return 'none';
+      return "none";
   }
 }
 
@@ -63,7 +63,7 @@ export function useVaultUiState(inputs: VaultUiInputs): VaultUiState {
   const [state, dispatch] = useReducer(reducer, inputs, deriveUiState);
 
   useEffect(() => {
-    dispatch({ type: 'sync', payload: inputs });
+    dispatch({ type: "sync", payload: inputs });
   }, [inputs]);
 
   return state;

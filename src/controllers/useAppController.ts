@@ -1,8 +1,8 @@
-import { useUrlState } from '../hooks/useUrlState';
-import { useAuth } from '../hooks/useAuth';
-import { useAppMode } from '../hooks/useAppMode';
-import { useActiveVault } from '../hooks/useActiveVault';
-import { useNoteRepository } from '../hooks/useNoteRepository';
+import { useUrlState } from "../hooks/useUrlState";
+import { useAuth } from "../hooks/useAuth";
+import { useAppMode } from "../hooks/useAppMode";
+import { useActiveVault } from "../hooks/useActiveVault";
+import { useNoteRepository } from "../hooks/useNoteRepository";
 
 export function useAppController() {
   const auth = useAuth();
@@ -12,7 +12,7 @@ export function useAppController() {
   const activeVault = useActiveVault({
     auth,
     mode: appMode.mode,
-    setMode: appMode.setMode
+    setMode: appMode.setMode,
   });
   const notes = useNoteRepository({
     mode: appMode.mode,
@@ -21,7 +21,7 @@ export function useAppController() {
     keyring: activeVault.keyring,
     activeKeyId: activeVault.activeKeyId,
     date,
-    year
+    year,
   });
 
   return {
@@ -29,6 +29,6 @@ export function useAppController() {
     auth,
     appMode,
     activeVault,
-    notes
+    notes,
   };
 }

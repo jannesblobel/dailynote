@@ -1,13 +1,13 @@
-import { supabase } from '../../lib/supabase';
-import { createUnifiedNoteRepository } from '../../storage/unifiedNoteRepository';
-import { createUnifiedSyncedNoteRepository } from '../../storage/unifiedSyncedNoteRepository';
-import { createUnifiedImageRepository } from '../../storage/unifiedImageRepository';
-import { createUnifiedSyncedImageRepository } from '../../storage/unifiedSyncedImageRepository';
-import type { UnifiedSyncedNoteRepository } from '../../storage/unifiedSyncedNoteRepository';
-import type { NoteRepository } from '../../storage/noteRepository';
-import type { ImageRepository } from '../../storage/imageRepository';
-import type { KeyringProvider } from '../../storage/unifiedNoteRepository';
-import { AppMode } from '../../hooks/useAppMode';
+import { supabase } from "../../lib/supabase";
+import { createUnifiedNoteRepository } from "../../storage/unifiedNoteRepository";
+import { createUnifiedSyncedNoteRepository } from "../../storage/unifiedSyncedNoteRepository";
+import { createUnifiedImageRepository } from "../../storage/unifiedImageRepository";
+import { createUnifiedSyncedImageRepository } from "../../storage/unifiedSyncedImageRepository";
+import type { UnifiedSyncedNoteRepository } from "../../storage/unifiedSyncedNoteRepository";
+import type { NoteRepository } from "../../storage/noteRepository";
+import type { ImageRepository } from "../../storage/imageRepository";
+import type { KeyringProvider } from "../../storage/unifiedNoteRepository";
+import { AppMode } from "../../hooks/useAppMode";
 
 interface NoteRepositoryOptions {
   mode: AppMode;
@@ -24,7 +24,7 @@ interface ImageRepositoryOptions {
 export function createNoteRepository({
   mode,
   userId,
-  keyProvider
+  keyProvider,
 }: NoteRepositoryOptions): NoteRepository | UnifiedSyncedNoteRepository {
   if (mode === AppMode.Cloud && userId) {
     return createUnifiedSyncedNoteRepository(supabase, userId, keyProvider);
@@ -35,7 +35,7 @@ export function createNoteRepository({
 export function createImageRepository({
   mode,
   userId,
-  keyProvider
+  keyProvider,
 }: ImageRepositoryOptions): ImageRepository {
   if (mode === AppMode.Cloud && userId) {
     return createUnifiedSyncedImageRepository(supabase, userId, keyProvider);

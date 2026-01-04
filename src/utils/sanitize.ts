@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import DOMPurify from "dompurify";
 
 /**
  * Configuration for DOMPurify
@@ -6,21 +6,40 @@ import DOMPurify from 'dompurify';
  */
 const SANITIZE_CONFIG = {
   ALLOWED_TAGS: [
-    'b', 'i', 'em', 'strong', 'u', 's', 'strike', 'del',
-    'br', 'p', 'div', 'span', 'img', 'a', 'code',
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr'
+    "b",
+    "i",
+    "em",
+    "strong",
+    "u",
+    "s",
+    "strike",
+    "del",
+    "br",
+    "p",
+    "div",
+    "span",
+    "img",
+    "a",
+    "code",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
   ],
   ALLOWED_ATTR: [
-    'data-image-id',
-    'data-timestamp',
-    'data-label',
-    'alt',
-    'width',
-    'height',
-    'href',
-    'target',
-    'rel',
-    'contenteditable'
+    "data-image-id",
+    "data-timestamp",
+    "data-label",
+    "alt",
+    "width",
+    "height",
+    "href",
+    "target",
+    "rel",
+    "contenteditable",
   ], // Image attributes (src set dynamically)
   KEEP_CONTENT: true, // Keep text content even if tags are stripped
   RETURN_DOM: false,
@@ -32,12 +51,12 @@ const SANITIZE_CONFIG = {
  * Allows only basic text formatting tags and links
  */
 export function sanitizeHtml(html: string): string {
-  if (!html || typeof html !== 'string') {
-    return '';
+  if (!html || typeof html !== "string") {
+    return "";
   }
 
   const result = DOMPurify.sanitize(html, SANITIZE_CONFIG);
-  return typeof result === 'string' ? result : '';
+  return typeof result === "string" ? result : "";
 }
 
 /**
@@ -48,10 +67,10 @@ export function isContentEmpty(html: string): boolean {
   if (!html) return true;
 
   // Create a temporary div to extract text content
-  const temp = document.createElement('div');
+  const temp = document.createElement("div");
   temp.innerHTML = html;
-  const hasText = (temp.textContent ?? '').trim().length > 0;
-  const hasImages = temp.querySelector('img') !== null;
+  const hasText = (temp.textContent ?? "").trim().length > 0;
+  const hasImages = temp.querySelector("img") !== null;
 
   return !hasText && !hasImages;
 }

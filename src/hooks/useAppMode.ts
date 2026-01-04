@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
-import { AuthState } from './useAuth';
-import { STORAGE_PREFIX } from '../utils/constants';
-import { useCloudPrompt } from './useCloudPrompt';
-import { AppMode } from '../utils/appMode';
+import { useCallback, useState } from "react";
+import { AuthState } from "./useAuth";
+import { STORAGE_PREFIX } from "../utils/constants";
+import { useCloudPrompt } from "./useCloudPrompt";
+import { AppMode } from "../utils/appMode";
 
-export { AppMode } from '../utils/appMode';
+export { AppMode } from "../utils/appMode";
 
 const CLOUD_PROMPT_KEY = `${STORAGE_PREFIX}cloud_prompted_v1`;
 
@@ -26,16 +26,20 @@ export interface UseAppModeReturn {
 export function useAppMode({ authState }: UseAppModeProps): UseAppModeReturn {
   const [modePreference, setModePreference] = useState<AppMode | null>(null);
   const cloudPrompt = useCloudPrompt(CLOUD_PROMPT_KEY);
-  const mode: AppMode = authState === AuthState.SignedIn
-    ? AppMode.Cloud
-    : (modePreference ?? AppMode.Local);
+  const mode: AppMode =
+    authState === AuthState.SignedIn
+      ? AppMode.Cloud
+      : (modePreference ?? AppMode.Local);
 
-  const setMode = useCallback((nextMode: AppMode) => {
-    setModePreference(nextMode);
-    if (nextMode === AppMode.Cloud) {
-      cloudPrompt.close();
-    }
-  }, [cloudPrompt]);
+  const setMode = useCallback(
+    (nextMode: AppMode) => {
+      setModePreference(nextMode);
+      if (nextMode === AppMode.Cloud) {
+        cloudPrompt.close();
+      }
+    },
+    [cloudPrompt],
+  );
 
   const requestModeChoice = useCallback(() => {
     cloudPrompt.request();
@@ -63,6 +67,6 @@ export function useAppMode({ authState }: UseAppModeProps): UseAppModeReturn {
     requestModeChoice,
     openModeChoice,
     closeModeChoice,
-    switchToCloud
+    switchToCloud,
   };
 }

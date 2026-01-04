@@ -1,13 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import type { User } from '@supabase/supabase-js';
-import { useNoteContent } from './useNoteContent';
-import { useNoteDates } from './useNoteDates';
-import { useSync } from './useSync';
-import { createNoteRepository, createImageRepository } from '../domain/notes/repositoryFactory';
-import type { UnifiedSyncedNoteRepository } from '../storage/unifiedSyncedNoteRepository';
-import type { NoteRepository } from '../storage/noteRepository';
-import type { ImageRepository } from '../storage/imageRepository';
-import { AppMode } from './useAppMode';
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import type { User } from "@supabase/supabase-js";
+import { useNoteContent } from "./useNoteContent";
+import { useNoteDates } from "./useNoteDates";
+import { useSync } from "./useSync";
+import {
+  createNoteRepository,
+  createImageRepository,
+} from "../domain/notes/repositoryFactory";
+import type { UnifiedSyncedNoteRepository } from "../storage/unifiedSyncedNoteRepository";
+import type { NoteRepository } from "../storage/noteRepository";
+import type { ImageRepository } from "../storage/imageRepository";
+import { AppMode } from "./useAppMode";
 
 const keyringTokenByKey = new WeakMap<CryptoKey, number>();
 let keyringTokenSeed = 0;
@@ -24,14 +27,17 @@ function getKeyringToken(key: CryptoKey) {
 }
 
 function getKeyringSignature(keyring: Map<string, CryptoKey>) {
-  if (!keyring.size) return '';
+  if (!keyring.size) return "";
   return Array.from(keyring.entries())
     .map(([keyId, key]) => `${keyId}:${getKeyringToken(key)}`)
     .sort()
-    .join('|');
+    .join("|");
 }
 
-const noteRepositoryCache = new Map<string, NoteRepository | UnifiedSyncedNoteRepository>();
+const noteRepositoryCache = new Map<
+  string,
+  NoteRepository | UnifiedSyncedNoteRepository
+>();
 const imageRepositoryCache = new Map<string, ImageRepository>();
 
 function getRepositoryCacheKey({
@@ -40,9 +46,9 @@ function getRepositoryCacheKey({
   userId,
   activeKeyId,
   vaultKey,
-  keyringSignature
+  keyringSignature,
 }: {
-  kind: 'note' | 'image';
+  kind: "note" | "image";
   mode: AppMode;
   userId: string | null;
   activeKeyId: string;
@@ -50,7 +56,7 @@ function getRepositoryCacheKey({
   keyringSignature: string;
 }) {
   const vaultToken = getKeyringToken(vaultKey);
-  const userToken = userId ?? 'local';
+  const userToken = userId ?? "local";
   return `${kind}:${mode}:${userToken}:${activeKeyId}:${vaultToken}:${keyringSignature}`;
 }
 
@@ -68,10 +74,10 @@ export interface UseNoteRepositoryReturn {
   repository: NoteRepository | UnifiedSyncedNoteRepository | null;
   imageRepository: ImageRepository | null;
   syncedRepo: UnifiedSyncedNoteRepository | null;
-  syncStatus: ReturnType<typeof useSync>['syncStatus'];
-  triggerSync: ReturnType<typeof useSync>['triggerSync'];
-  queueIdleSync: ReturnType<typeof useSync>['queueIdleSync'];
-  pendingOps: ReturnType<typeof useSync>['pendingOps'];
+  syncStatus: ReturnType<typeof useSync>["syncStatus"];
+  triggerSync: ReturnType<typeof useSync>["triggerSync"];
+  queueIdleSync: ReturnType<typeof useSync>["queueIdleSync"];
+  pendingOps: ReturnType<typeof useSync>["pendingOps"];
   capabilities: {
     canSync: boolean;
     canUploadImages: boolean;
@@ -93,19 +99,24 @@ export function useNoteRepository({
   keyring,
   activeKeyId,
   date,
-  year
+  year,
 }: UseNoteRepositoryProps): UseNoteRepositoryReturn {
   const userId = authUser?.id ?? null;
-  const keyringSignature = useMemo(() => getKeyringSignature(keyring), [keyring]);
-  const repository = useMemo<NoteRepository | UnifiedSyncedNoteRepository | null>(() => {
+  const keyringSignature = useMemo(
+    () => getKeyringSignature(keyring),
+    [keyring],
+  );
+  const repository = useMemo<
+    NoteRepository | UnifiedSyncedNoteRepository | null
+  >(() => {
     if (!vaultKey || !activeKeyId) return null;
     const cacheKey = getRepositoryCacheKey({
-      kind: 'note',
+      kind: "note",
       mode,
       userId,
       activeKeyId,
       vaultKey,
-      keyringSignature
+      keyringSignature,
     });
     const cached = noteRepositoryCache.get(cacheKey);
     if (cached) {
@@ -113,13 +124,13 @@ export function useNoteRepository({
     }
     const keyProvider = {
       activeKeyId,
-      getKey: (keyId: string) => keyring.get(keyId) ?? null
+      getKey: (keyId: string) => keyring.get(keyId) ?? null,
     };
 
     const created = createNoteRepository({
       mode,
       userId,
-      keyProvider
+      keyProvider,
     });
     noteRepositoryCache.set(cacheKey, created);
     return created;
@@ -128,12 +139,12 @@ export function useNoteRepository({
   const imageRepository = useMemo<ImageRepository | null>(() => {
     if (!vaultKey || !activeKeyId) return null;
     const cacheKey = getRepositoryCacheKey({
-      kind: 'image',
+      kind: "image",
       mode,
       userId,
       activeKeyId,
       vaultKey,
-      keyringSignature
+      keyringSignature,
     });
     const cached = imageRepositoryCache.get(cacheKey);
     if (cached) {
@@ -141,25 +152,34 @@ export function useNoteRepository({
     }
     const keyProvider = {
       activeKeyId,
-      getKey: (keyId: string) => keyring.get(keyId) ?? null
+      getKey: (keyId: string) => keyring.get(keyId) ?? null,
     };
     const created = createImageRepository({
       mode,
       userId,
-      keyProvider
+      keyProvider,
     });
     imageRepositoryCache.set(cacheKey, created);
     return created;
   }, [vaultKey, keyring, activeKeyId, mode, userId, keyringSignature]);
 
   const syncedRepo =
-    mode === AppMode.Cloud && userId ? (repository as UnifiedSyncedNoteRepository) : null;
-  const { syncStatus, triggerSync, queueIdleSync, pendingOps } = useSync(syncedRepo);
-  const { hasNote, noteDates, refreshNoteDates } = useNoteDates(repository, year);
-  const capabilities = useMemo(() => ({
-    canSync: !!syncedRepo,
-    canUploadImages: !!imageRepository
-  }), [syncedRepo, imageRepository]);
+    mode === AppMode.Cloud && userId
+      ? (repository as UnifiedSyncedNoteRepository)
+      : null;
+  const { syncStatus, triggerSync, queueIdleSync, pendingOps } =
+    useSync(syncedRepo);
+  const { hasNote, noteDates, refreshNoteDates } = useNoteDates(
+    repository,
+    year,
+  );
+  const capabilities = useMemo(
+    () => ({
+      canSync: !!syncedRepo,
+      canUploadImages: !!imageRepository,
+    }),
+    [syncedRepo, imageRepository],
+  );
   const refreshTimerRef = useRef<number | null>(null);
   const handleAfterSave = useCallback(() => {
     if (refreshTimerRef.current !== null) {
@@ -180,13 +200,8 @@ export function useNoteRepository({
     };
   }, []);
 
-  const {
-    content,
-    setContent,
-    isDecrypting,
-    hasEdits,
-    isContentReady
-  } = useNoteContent(date, repository, handleAfterSave);
+  const { content, setContent, isDecrypting, hasEdits, isContentReady } =
+    useNoteContent(date, repository, handleAfterSave);
 
   return {
     repository,
@@ -204,6 +219,6 @@ export function useNoteRepository({
     noteDates,
     refreshNoteDates,
     isDecrypting,
-    isContentReady
+    isContentReady,
   };
 }

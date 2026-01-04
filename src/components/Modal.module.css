@@ -1,0 +1,29 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: var(--overlay-bg);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  display: flex;
+  justify-content: center;
+  z-index: 100;
+}
+
+.closeButton {
+  background-color: transparent;
+  color: var(--color-text);
+  font-size: 24px;
+  width: 48px;
+  height: 48px;
+  position: fixed;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  z-index: 101;
+}
+
+@media (max-width: 768px) {
+  .closeButton {
+    top: var(--spacing-xs);
+    right: var(--spacing-xs);
+  }
+}

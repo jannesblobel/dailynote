@@ -39,12 +39,14 @@ Visit the live demo: [Add your deployment URL here]
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/yourusername/dailynote.git
 cd dailynote
 ```
 
 2. Install dependencies:
+
 ```bash
 yarn install
 # or
@@ -52,6 +54,7 @@ npm install
 ```
 
 3. Start the development server:
+
 ```bash
 yarn dev
 # or
@@ -87,11 +90,13 @@ This project includes Wrangler configuration for deployment to Cloudflare's new 
 **Method 1: Direct Deployment with Wrangler CLI**
 
 1. Login to Cloudflare:
+
    ```bash
    yarn wrangler login
    ```
 
 2. Deploy your site:
+
    ```bash
    yarn deploy
    # or
@@ -124,6 +129,7 @@ yarn cf:dev
 ### Other Platforms
 
 This is a standard Vite + React app and can be deployed to:
+
 - Vercel
 - Netlify
 - GitHub Pages
@@ -184,16 +190,19 @@ For a deeper explanation of the key hierarchy and unlock flow, see `docs/key-der
 For the data flow across local storage and cloud sync, see `docs/data-flow.md`.
 
 ### Local mode (default)
+
 - A device-bound vault key is created on first load without prompting.
 - Notes are encrypted with AES-GCM and stored in IndexedDB.
 - The vault can auto-unlock using a non-exportable device key stored in IndexedDB.
 
 ### Cloud mode (optional)
+
 - When you sign in, a password-derived key wraps the same vault key.
 - Notes are encrypted client-side before syncing to Supabase.
 - A local encrypted cache is kept for offline use and conflict resolution.
 
 ### Data durability
+
 - Clearing browser data deletes local notes and local keys.
 - Cloud sync acts as a backup once you sign in.
 
@@ -209,11 +218,13 @@ For the data flow across local storage and cloud sync, see `docs/data-flow.md`.
 ### Code Style
 
 This project uses:
+
 - ESLint for code linting
 - TypeScript strict mode
 - Consistent code formatting
 
 Run the linter:
+
 ```bash
 yarn lint
 # or

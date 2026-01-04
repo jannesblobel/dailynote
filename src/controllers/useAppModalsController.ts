@@ -1,25 +1,26 @@
-import { useCallback, useEffect } from 'react';
-import { isContentEmpty } from '../utils/sanitize';
-import { AppMode } from '../hooks/useAppMode';
-import { useModalTransition } from '../hooks/useModalTransition';
-import { useNoteNavigation } from '../hooks/useNoteNavigation';
-import { useNoteKeyboardNav } from '../hooks/useNoteKeyboardNav';
-import { AuthState, ViewType } from '../types';
-import { useActiveVaultContext } from '../contexts/activeVaultContext';
-import { useAppModeContext } from '../contexts/appModeContext';
-import { useNoteRepositoryContext } from '../contexts/noteRepositoryContext';
-import { useUrlStateContext } from '../contexts/urlStateContext';
-import { useVaultUiState } from '../hooks/useVaultUiState';
+import { useCallback, useEffect } from "react";
+import { isContentEmpty } from "../utils/sanitize";
+import { AppMode } from "../hooks/useAppMode";
+import { useModalTransition } from "../hooks/useModalTransition";
+import { useNoteNavigation } from "../hooks/useNoteNavigation";
+import { useNoteKeyboardNav } from "../hooks/useNoteKeyboardNav";
+import { AuthState, ViewType } from "../types";
+import { useActiveVaultContext } from "../contexts/activeVaultContext";
+import { useAppModeContext } from "../contexts/appModeContext";
+import { useNoteRepositoryContext } from "../contexts/noteRepositoryContext";
+import { useUrlStateContext } from "../contexts/urlStateContext";
+import { useVaultUiState } from "../hooks/useVaultUiState";
 
 export function useAppModalsController() {
   const {
     mode,
+    setMode,
     isModeChoiceOpen,
     pendingModeChoice,
     openModeChoice,
     closeModeChoice,
     requestModeChoice,
-    switchToCloud
+    switchToCloud,
   } = useAppModeContext();
   const {
     auth,
@@ -33,7 +34,8 @@ export function useAppModalsController() {
     handleSignIn,
     handleSignUp,
     handleSignOut,
-    localPassword
+    clearVaultError,
+    localPassword,
   } = useActiveVaultContext();
   const {
     content,
@@ -42,7 +44,7 @@ export function useAppModalsController() {
     isContentReady,
     hasEdits,
     noteDates,
-    triggerSync
+    triggerSync,
   } = useNoteRepositoryContext();
   const {
     view,
@@ -52,9 +54,10 @@ export function useAppModalsController() {
     navigateToDate,
     showIntro,
     dismissIntro,
-    startWriting
+    startWriting,
   } = useUrlStateContext();
-  const isNoteModalOpen = view === ViewType.Note && date !== null && isVaultUnlocked;
+  const isNoteModalOpen =
+    view === ViewType.Note && date !== null && isVaultUnlocked;
 
   const handleCloseComplete = useCallback(() => {
     const hasLocalNote = noteDates.size > 0 || !isContentEmpty(content);
@@ -74,37 +77,37 @@ export function useAppModalsController() {
     noteDates.size,
     requestModeChoice,
     triggerSync,
-    year
+    year,
   ]);
 
   const {
     showContent: showModalContent,
     isClosing,
-    requestClose: handleCloseModal
+    requestClose: handleCloseModal,
   } = useModalTransition({
     isOpen: isNoteModalOpen,
     onCloseComplete: handleCloseComplete,
     openDelayMs: 100,
     resetDelayMs: 0,
-    closeDelayMs: hasEdits ? 200 : 0
+    closeDelayMs: hasEdits ? 200 : 0,
   });
 
   const {
     canNavigatePrev,
     canNavigateNext,
     navigateToPrevious,
-    navigateToNext
+    navigateToNext,
   } = useNoteNavigation({
     currentDate: date,
     noteDates,
-    onNavigate: navigateToDate
+    onNavigate: navigateToDate,
   });
 
   useNoteKeyboardNav({
     enabled: isNoteModalOpen && !isDecrypting,
     onPrevious: navigateToPrevious,
     onNext: navigateToNext,
-    contentEditableSelector: '.note-editor__content'
+    contentEditableSelector: '[data-note-editor="content"]',
   });
 
   useEffect(() => {
@@ -121,16 +124,17 @@ export function useAppModalsController() {
       triggerSync({ immediate: true });
     };
 
-    window.addEventListener('pagehide', handlePageExit);
-    window.addEventListener('beforeunload', handlePageExit);
+    window.addEventListener("pagehide", handlePageExit);
+    window.addEventListener("beforeunload", handlePageExit);
 
     return () => {
-      window.removeEventListener('pagehide', handlePageExit);
-      window.removeEventListener('beforeunload', handlePageExit);
+      window.removeEventListener("pagehide", handlePageExit);
+      window.removeEventListener("beforeunload", handlePageExit);
     };
   }, [mode, isVaultUnlocked, triggerSync]);
 
-  const isSigningIn = mode === AppMode.Cloud &&
+  const isSigningIn =
+    mode === AppMode.Cloud &&
     auth.authState === AuthState.SignedIn &&
     (!cloudVault.isReady || cloudVault.isBusy);
   const vaultUiState = useVaultUiState({
@@ -143,48 +147,61 @@ export function useAppModalsController() {
     isVaultLocked,
     vaultError,
     localVaultReady: localVault.isReady,
-    localRequiresPassword: localVault.requiresPassword
+    localRequiresPassword: localVault.requiresPassword,
   });
 
-  const shouldRenderNoteEditor = isNoteModalOpen && (showModalContent || isClosing);
+  const shouldRenderNoteEditor =
+    isNoteModalOpen && (showModalContent || isClosing);
+
+  const handleCloudAuthDismiss = useCallback(() => {
+    auth.clearError();
+    if (auth.authState === AuthState.SignedIn) {
+      void handleSignOut();
+      return;
+    }
+    auth.backToSignIn();
+    setMode(AppMode.Local);
+  }, [auth, handleSignOut, setMode]);
 
   return {
     introModal: {
-      isOpen: vaultUiState === 'intro',
+      isOpen: vaultUiState === "intro",
       onDismiss: dismissIntro,
       onStartWriting: startWriting,
-      onSetupSync: switchToCloud
+      onSetupSync: switchToCloud,
     },
     modeChoiceModal: {
-      isOpen: vaultUiState === 'modeChoice',
+      isOpen: vaultUiState === "modeChoice",
       onConfirm: switchToCloud,
-      onDismiss: closeModeChoice
+      onDismiss: closeModeChoice,
     },
     localVaultModal: {
-      isOpen: vaultUiState === 'localVault',
+      isOpen: vaultUiState === "localVault",
       hasVault: localVault.hasVault,
       isBusy: localVault.isBusy,
       error: localVault.error,
       onUnlock: handleLocalUnlock,
-      onSwitchToCloud: switchToCloud
+      onSwitchToCloud: switchToCloud,
     },
     cloudAuthModal: {
-      isOpen: vaultUiState === 'cloudAuth',
+      isOpen: vaultUiState === "cloudAuth",
       isSigningIn,
       authState: auth.authState,
       confirmationEmail: auth.confirmationEmail,
       isBusy: auth.isBusy,
       error: auth.error,
       localPassword,
+      onDismiss: handleCloudAuthDismiss,
       onBackToSignIn: auth.backToSignIn,
       onSignIn: handleSignIn,
-      onSignUp: handleSignUp
+      onSignUp: handleSignUp,
     },
     vaultErrorModal: {
-      isOpen: vaultUiState === 'vaultError',
+      isOpen: vaultUiState === "vaultError",
       error: vaultError,
       mode,
-      onSignOut: handleSignOut
+      onSignOut: handleSignOut,
+      onDismiss: clearVaultError,
     },
     noteModal: {
       isOpen: isNoteModalOpen,
@@ -200,7 +217,7 @@ export function useAppModalsController() {
       canNavigatePrev,
       canNavigateNext,
       navigateToPrevious,
-      navigateToNext
-    }
+      navigateToNext,
+    },
   };
 }

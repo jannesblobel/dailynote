@@ -23,7 +23,7 @@ const MAX_DIMENSION = 3000; // Max width/height to prevent huge images
  */
 export async function compressImage(
   file: File,
-  maxSizeBytes: number = DEFAULT_MAX_SIZE
+  maxSizeBytes: number = DEFAULT_MAX_SIZE,
 ): Promise<CompressedImage> {
   // If file is already small enough, return as-is
   if (file.size <= maxSizeBytes) {
@@ -32,7 +32,7 @@ export async function compressImage(
       blob: file,
       width: dimensions.width,
       height: dimensions.height,
-      mimeType: file.type
+      mimeType: file.type,
     };
   }
 
@@ -43,29 +43,41 @@ export async function compressImage(
   let { width, height } = calculateTargetDimensions(
     img.width,
     img.height,
-    MAX_DIMENSION
+    MAX_DIMENSION,
   );
 
   // Determine output format (JPEG for photos, PNG for transparency)
   const hasAlpha = await imageHasTransparency(file);
-  const outputMimeType = hasAlpha ? 'image/png' : 'image/jpeg';
-  const quality = outputMimeType === 'image/jpeg' ? JPEG_QUALITY : 1;
+  const outputMimeType = hasAlpha ? "image/png" : "image/jpeg";
+  const quality = outputMimeType === "image/jpeg" ? JPEG_QUALITY : 1;
 
   // Compress with multiple passes if needed
-  let compressed = await compressToCanvas(img, width, height, outputMimeType, quality);
+  let compressed = await compressToCanvas(
+    img,
+    width,
+    height,
+    outputMimeType,
+    quality,
+  );
 
   // If still too large, reduce dimensions further
   while (compressed.size > maxSizeBytes && width > 100 && height > 100) {
     width = Math.floor(width * 0.8);
     height = Math.floor(height * 0.8);
-    compressed = await compressToCanvas(img, width, height, outputMimeType, quality);
+    compressed = await compressToCanvas(
+      img,
+      width,
+      height,
+      outputMimeType,
+      quality,
+    );
   }
 
   return {
     blob: compressed,
     width,
     height,
-    mimeType: outputMimeType
+    mimeType: outputMimeType,
   };
 }
 
@@ -84,7 +96,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image'));
+      reject(new Error("Failed to load image"));
     };
 
     img.src = url;
@@ -94,7 +106,9 @@ function loadImage(file: File): Promise<HTMLImageElement> {
 /**
  * Get dimensions of an image file without loading into canvas
  */
-function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+function getImageDimensions(
+  file: File,
+): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -106,7 +120,7 @@ function getImageDimensions(file: File): Promise<{ width: number; height: number
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Failed to get image dimensions'));
+      reject(new Error("Failed to get image dimensions"));
     };
 
     img.src = url;
@@ -118,14 +132,14 @@ function getImageDimensions(file: File): Promise<{ width: number; height: number
  */
 async function imageHasTransparency(file: File): Promise<boolean> {
   // PNG and WebP can have transparency, JPEG cannot
-  if (file.type === 'image/png' || file.type === 'image/webp') {
+  if (file.type === "image/png" || file.type === "image/webp") {
     // For PNG/WebP, actually check the pixels
     try {
       const img = await loadImage(file);
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = Math.min(img.width, 100); // Sample area only
       canvas.height = Math.min(img.height, 100);
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
 
       if (!ctx) return false;
 
@@ -154,7 +168,7 @@ async function imageHasTransparency(file: File): Promise<boolean> {
 function calculateTargetDimensions(
   width: number,
   height: number,
-  maxDimension: number
+  maxDimension: number,
 ): { width: number; height: number } {
   if (width <= maxDimension && height <= maxDimension) {
     return { width, height };
@@ -165,12 +179,12 @@ function calculateTargetDimensions(
   if (width > height) {
     return {
       width: maxDimension,
-      height: Math.round(maxDimension / aspectRatio)
+      height: Math.round(maxDimension / aspectRatio),
     };
   } else {
     return {
       width: Math.round(maxDimension * aspectRatio),
-      height: maxDimension
+      height: maxDimension,
     };
   }
 }
@@ -183,22 +197,22 @@ function compressToCanvas(
   width: number,
   height: number,
   mimeType: string,
-  quality: number
+  quality: number,
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) {
-      reject(new Error('Failed to get canvas context'));
+      reject(new Error("Failed to get canvas context"));
       return;
     }
 
     // Use better image smoothing for quality
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    ctx.imageSmoothingQuality = "high";
 
     // Draw image at target size
     ctx.drawImage(img, 0, 0, width, height);
@@ -209,11 +223,11 @@ function compressToCanvas(
         if (blob) {
           resolve(blob);
         } else {
-          reject(new Error('Failed to create blob from canvas'));
+          reject(new Error("Failed to create blob from canvas"));
         }
       },
       mimeType,
-      quality
+      quality,
     );
   });
 }

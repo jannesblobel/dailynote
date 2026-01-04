@@ -1,4 +1,4 @@
-import { parseDate } from './date';
+import { parseDate } from "./date";
 
 /**
  * Get sorted array of navigable dates (notes + today)
@@ -6,7 +6,7 @@ import { parseDate } from './date';
  */
 export function getNavigableDates(
   noteDates: Set<string>,
-  todayStr: string
+  todayStr: string,
 ): string[] {
   // Create array from note dates and ensure today is included
   const datesArray = Array.from(noteDates);
@@ -31,7 +31,7 @@ export function getNavigableDates(
  */
 export function getPreviousDate(
   currentDate: string,
-  navigableDates: string[]
+  navigableDates: string[],
 ): string | null {
   const currentIndex = navigableDates.indexOf(currentDate);
 
@@ -48,7 +48,7 @@ export function getPreviousDate(
  */
 export function getNextDate(
   currentDate: string,
-  navigableDates: string[]
+  navigableDates: string[],
 ): string | null {
   const currentIndex = navigableDates.indexOf(currentDate);
 
@@ -64,12 +64,12 @@ export function getNextDate(
  */
 export function getNavigationBoundaries(
   currentDate: string,
-  navigableDates: string[]
+  navigableDates: string[],
 ): { isAtStart: boolean; isAtEnd: boolean } {
   const currentIndex = navigableDates.indexOf(currentDate);
 
   return {
     isAtStart: currentIndex === 0,
-    isAtEnd: currentIndex === navigableDates.length - 1
+    isAtEnd: currentIndex === navigableDates.length - 1,
   };
 }

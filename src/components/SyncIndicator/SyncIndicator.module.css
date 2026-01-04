@@ -1,0 +1,41 @@
+.indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+}
+
+.synced {
+  color: var(--color-sync-success);
+}
+
+.error {
+  color: var(--color-sync-error);
+}
+
+.offline {
+  color: var(--color-sync-offline);
+}
+
+.pending {
+  color: var(--color-sync-pending);
+}
+
+.spinner {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-text-muted);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

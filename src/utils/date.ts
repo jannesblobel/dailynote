@@ -1,18 +1,28 @@
-import { DayCellState } from '../types';
+import { DayCellState } from "../types";
 
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
-const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 /**
  * Format a Date object to DD-MM-YYYY string
  */
 export function formatDate(date: Date): string {
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
   return `${day}-${month}-${year}`;
 }
@@ -21,7 +31,7 @@ export function formatDate(date: Date): string {
  * Parse a DD-MM-YYYY string to a Date object
  */
 export function parseDate(dateStr: string): Date | null {
-  const parts = dateStr.split('-');
+  const parts = dateStr.split("-");
   if (parts.length !== 3) return null;
 
   const day = parseInt(parts[0], 10);
@@ -33,7 +43,11 @@ export function parseDate(dateStr: string): Date | null {
   const date = new Date(year, month, day);
 
   // Validate the date is real (e.g., not Feb 30)
-  if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+  if (
+    date.getDate() !== day ||
+    date.getMonth() !== month ||
+    date.getFullYear() !== year
+  ) {
     return null;
   }
 
@@ -54,18 +68,21 @@ export function formatDateDisplay(dateStr: string): string {
   const date = parseDate(dateStr);
   if (!date) return dateStr;
 
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 }
 
 /**
  * Get the state of a day cell relative to today
  */
-export function getDayCellState(date: Date, now: Date = new Date()): DayCellState {
+export function getDayCellState(
+  date: Date,
+  now: Date = new Date(),
+): DayCellState {
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
 

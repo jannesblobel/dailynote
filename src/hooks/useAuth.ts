@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { Session, User, AuthError } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-import { AUTH_HAS_LOGGED_IN_KEY } from '../utils/constants';
-import { AuthState } from '../types';
+import { useCallback, useEffect, useState } from "react";
+import type { Session, User, AuthError } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase";
+import { AUTH_HAS_LOGGED_IN_KEY } from "../utils/constants";
+import { AuthState } from "../types";
 
 export interface UseAuthReturn {
   session: Session | null;
@@ -11,31 +11,37 @@ export interface UseAuthReturn {
   error: string | null;
   isBusy: boolean;
   confirmationEmail: string | null;
-  signUp: (email: string, password: string) => Promise<{ success: boolean; password?: string }>;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; password?: string }>;
+  signUp: (
+    email: string,
+    password: string,
+  ) => Promise<{ success: boolean; password?: string }>;
+  signIn: (
+    email: string,
+    password: string,
+  ) => Promise<{ success: boolean; password?: string }>;
   signOut: () => Promise<void>;
   clearError: () => void;
   backToSignIn: () => void;
 }
 
 function formatAuthError(error: AuthError): string {
-  if (error.message.includes('Invalid login credentials')) {
-    return 'Invalid email or password.';
+  if (error.message.includes("Invalid login credentials")) {
+    return "Invalid email or password.";
   }
-  if (error.message.includes('User already registered')) {
-    return 'An account with this email already exists.';
+  if (error.message.includes("User already registered")) {
+    return "An account with this email already exists.";
   }
-  if (error.message.includes('Password should be at least')) {
-    return 'Password must be at least 6 characters.';
+  if (error.message.includes("Password should be at least")) {
+    return "Password must be at least 6 characters.";
   }
-  if (error.message.includes('Invalid email')) {
-    return 'Please enter a valid email address.';
+  if (error.message.includes("Invalid email")) {
+    return "Please enter a valid email address.";
   }
   return error.message;
 }
 
 function isSessionMissingError(error: AuthError | null): boolean {
-  return Boolean(error && error.name === 'AuthSessionMissingError');
+  return Boolean(error && error.name === "AuthSessionMissingError");
 }
 
 export function useAuth(): UseAuthReturn {
@@ -43,11 +49,13 @@ export function useAuth(): UseAuthReturn {
   const [authState, setAuthState] = useState<AuthState>(AuthState.Loading);
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
-  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(
+    null,
+  );
 
   const markHasLoggedIn = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(AUTH_HAS_LOGGED_IN_KEY, '1');
+    if (typeof window === "undefined") return;
+    localStorage.setItem(AUTH_HAS_LOGGED_IN_KEY, "1");
   }, []);
 
   useEffect(() => {
@@ -66,7 +74,7 @@ export function useAuth(): UseAuthReturn {
     });
 
     const {
-      data: { subscription }
+      data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setAuthState(session ? AuthState.SignedIn : AuthState.SignedOut);
@@ -79,14 +87,14 @@ export function useAuth(): UseAuthReturn {
   const signUp = useCallback(
     async (
       email: string,
-      password: string
+      password: string,
     ): Promise<{ success: boolean; password?: string }> => {
       setIsBusy(true);
       setError(null);
       try {
         const { data, error } = await supabase.auth.signUp({
           email,
-          password
+          password,
         });
         if (error) {
           setError(formatAuthError(error));
@@ -105,20 +113,20 @@ export function useAuth(): UseAuthReturn {
         setIsBusy(false);
       }
     },
-    []
+    [],
   );
 
   const signIn = useCallback(
     async (
       email: string,
-      password: string
+      password: string,
     ): Promise<{ success: boolean; password?: string }> => {
       setIsBusy(true);
       setError(null);
       try {
         const { error } = await supabase.auth.signInWithPassword({
           email,
-          password
+          password,
         });
         if (error) {
           setError(formatAuthError(error));
@@ -129,7 +137,7 @@ export function useAuth(): UseAuthReturn {
         setIsBusy(false);
       }
     },
-    []
+    [],
   );
 
   const signOut = useCallback(async () => {
@@ -137,7 +145,7 @@ export function useAuth(): UseAuthReturn {
     setError(null);
     try {
       // Use 'local' scope to clear session even if server session is already invalid
-      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      const { error } = await supabase.auth.signOut({ scope: "local" });
       if (isSessionMissingError(error)) {
         await supabase.auth.getUser();
         setSession(null);
@@ -166,7 +174,7 @@ export function useAuth(): UseAuthReturn {
     signIn,
     signOut,
     clearError,
-    backToSignIn
+    backToSignIn,
   };
 }
 

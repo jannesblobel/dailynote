@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
 function hasFilePayload(event: DragEvent): boolean {
-  return event.dataTransfer?.types?.includes('Files') ?? false;
+  return event.dataTransfer?.types?.includes("Files") ?? false;
 }
 
 export function useImageDragState() {
@@ -40,16 +40,16 @@ export function useImageDragState() {
       setIsDraggingImage(false);
     };
 
-    window.addEventListener('dragenter', handleDragEnter);
-    window.addEventListener('dragover', handleDragOver);
-    window.addEventListener('dragleave', handleDragLeave);
-    window.addEventListener('drop', handleDrop);
+    window.addEventListener("dragenter", handleDragEnter);
+    window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("dragleave", handleDragLeave);
+    window.addEventListener("drop", handleDrop);
 
     return () => {
-      window.removeEventListener('dragenter', handleDragEnter);
-      window.removeEventListener('dragover', handleDragOver);
-      window.removeEventListener('dragleave', handleDragLeave);
-      window.removeEventListener('drop', handleDrop);
+      window.removeEventListener("dragenter", handleDragEnter);
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("dragleave", handleDragLeave);
+      window.removeEventListener("drop", handleDrop);
     };
   }, [isDraggingImage]);
 
@@ -60,6 +60,6 @@ export function useImageDragState() {
 
   return {
     isDraggingImage,
-    endImageDrag
+    endImageDrag,
   };
 }

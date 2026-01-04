@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 
 interface UseModalTransitionOptions {
   isOpen: boolean;
@@ -26,7 +32,7 @@ export function useModalTransition({
   onCloseComplete,
   openDelayMs = 100,
   resetDelayMs = 0,
-  closeDelayMs = 200
+  closeDelayMs = 200,
 }: UseModalTransitionOptions): UseModalTransitionReturn {
   const [showContent, setShowContent] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -72,6 +78,6 @@ export function useModalTransition({
   return {
     showContent,
     isClosing,
-    requestClose
+    requestClose,
   };
 }

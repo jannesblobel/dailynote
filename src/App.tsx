@@ -1,16 +1,15 @@
-import { Calendar } from './components/Calendar';
-import { AppModals } from './components/AppModals';
-import { AuthState } from './hooks/useAuth';
-import { AppMode } from './hooks/useAppMode';
-import { useAppController } from './controllers/useAppController';
-import { AppModeProvider } from './contexts/AppModeProvider';
-import { ActiveVaultProvider } from './contexts/ActiveVaultProvider';
-import { NoteRepositoryProvider } from './contexts/NoteRepositoryProvider';
-import { UrlStateProvider } from './contexts/UrlStateProvider';
+import { Calendar } from "./components/Calendar";
+import { AppModals } from "./components/AppModals";
+import { AuthState } from "./hooks/useAuth";
+import { AppMode } from "./hooks/useAppMode";
+import { useAppController } from "./controllers/useAppController";
+import { AppModeProvider } from "./contexts/AppModeProvider";
+import { ActiveVaultProvider } from "./contexts/ActiveVaultProvider";
+import { NoteRepositoryProvider } from "./contexts/NoteRepositoryProvider";
+import { UrlStateProvider } from "./contexts/UrlStateProvider";
 
-import './styles/theme.css';
-import './styles/reset.css';
-import './styles/components.css';
+import "./styles/theme.css";
+import "./styles/reset.css";
 
 function App() {
   const { urlState, auth, appMode, activeVault, notes } = useAppController();
@@ -28,12 +27,24 @@ function App() {
               <Calendar
                 year={year}
                 hasNote={notes.hasNote}
-                onDayClick={activeVault.isVaultUnlocked ? navigateToDate : undefined}
+                onDayClick={
+                  activeVault.isVaultUnlocked ? navigateToDate : undefined
+                }
                 onYearChange={navigateToYear}
                 syncStatus={canSync ? notes.syncStatus : undefined}
                 pendingOps={canSync ? notes.pendingOps : undefined}
-                onSignIn={appMode.mode !== AppMode.Cloud && auth.authState !== AuthState.SignedIn ? appMode.switchToCloud : undefined}
-                onSignOut={appMode.mode === AppMode.Cloud && auth.authState === AuthState.SignedIn ? activeVault.handleSignOut : undefined}
+                onSignIn={
+                  appMode.mode !== AppMode.Cloud &&
+                  auth.authState !== AuthState.SignedIn
+                    ? appMode.switchToCloud
+                    : undefined
+                }
+                onSignOut={
+                  appMode.mode === AppMode.Cloud &&
+                  auth.authState === AuthState.SignedIn
+                    ? activeVault.handleSignOut
+                    : undefined
+                }
               />
 
               <AppModals />

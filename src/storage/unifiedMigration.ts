@@ -1,20 +1,25 @@
-import { base64ToBytes, decodeUtf8 } from './cryptoUtils';
-import { encryptNoteContent, setNoteAndMeta } from './unifiedNoteStore';
-import { storeImageAndMeta } from './unifiedImageStore';
-import { deriveImageKey, encryptImageBuffer } from './unifiedImageCrypto';
-import { computeKeyId } from './keyId';
-import type { ImageMetaRecord, ImageRecord, NoteMetaRecord, NoteRecord } from './unifiedDb';
-import type { NoteImage } from '../types';
+import { base64ToBytes, decodeUtf8 } from "./cryptoUtils";
+import { encryptNoteContent, setNoteAndMeta } from "./unifiedNoteStore";
+import { storeImageAndMeta } from "./unifiedImageStore";
+import { deriveImageKey, encryptImageBuffer } from "./unifiedImageCrypto";
+import { computeKeyId } from "./keyId";
+import type {
+  ImageMetaRecord,
+  ImageRecord,
+  NoteMetaRecord,
+  NoteRecord,
+} from "./unifiedDb";
+import type { NoteImage } from "../types";
 
-const MIGRATION_KEY = 'dailynotes_unified_migrated_v1';
+const MIGRATION_KEY = "dailynotes_unified_migrated_v1";
 
-const LEGACY_NOTES_DB = 'dailynotes-notes';
-const LEGACY_NOTES_STORE = 'notes';
-const LEGACY_SYNCED_DB = 'dailynotes-synced';
-const LEGACY_SYNCED_STORE = 'notes';
-const LEGACY_IMAGES_DB = 'dailynotes-images';
-const LEGACY_IMAGES_STORE = 'images';
-const LEGACY_IMAGES_META_STORE = 'image_meta';
+const LEGACY_NOTES_DB = "dailynotes-notes";
+const LEGACY_NOTES_STORE = "notes";
+const LEGACY_SYNCED_DB = "dailynotes-synced";
+const LEGACY_SYNCED_STORE = "notes";
+const LEGACY_IMAGES_DB = "dailynotes-images";
+const LEGACY_IMAGES_STORE = "images";
+const LEGACY_IMAGES_META_STORE = "image_meta";
 
 interface LegacyEncryptedNotePayload {
   version: 1;
@@ -47,7 +52,7 @@ interface MigrationOptions {
 }
 
 interface LegacyNoteCandidate {
-  source: 'local' | 'synced';
+  source: "local" | "synced";
   date: string;
   content: string;
   updatedAt: string;
@@ -60,17 +65,19 @@ interface LegacyNoteCandidate {
 }
 
 function hasMigrationFlag(): boolean {
-  return typeof window !== 'undefined' && localStorage.getItem(MIGRATION_KEY) === '1';
+  return (
+    typeof window !== "undefined" && localStorage.getItem(MIGRATION_KEY) === "1"
+  );
 }
 
 function setMigrationFlag(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(MIGRATION_KEY, '1');
+  if (typeof window !== "undefined") {
+    localStorage.setItem(MIGRATION_KEY, "1");
   }
 }
 
 async function legacyDbExists(name: string): Promise<boolean> {
-  if (!('databases' in indexedDB)) {
+  if (!("databases" in indexedDB)) {
     return true;
   }
   const databases = await indexedDB.databases();
@@ -87,7 +94,10 @@ async function openLegacyDb(name: string): Promise<IDBDatabase | null> {
   });
 }
 
-async function getAllFromStore<T>(dbName: string, storeName: string): Promise<T[]> {
+async function getAllFromStore<T>(
+  dbName: string,
+  storeName: string,
+): Promise<T[]> {
   const db = await openLegacyDb(dbName);
   if (!db) return [];
   if (!db.objectStoreNames.contains(storeName)) {
@@ -95,7 +105,7 @@ async function getAllFromStore<T>(dbName: string, storeName: string): Promise<T[
     return [];
   }
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readonly');
+    const tx = db.transaction(storeName, "readonly");
     const store = tx.objectStore(storeName);
     const request = store.getAll();
     request.onsuccess = () => resolve(request.result ?? []);
@@ -110,7 +120,7 @@ async function getAllFromStore<T>(dbName: string, storeName: string): Promise<T[
 
 async function getAllFromStoreWithKeys<T>(
   dbName: string,
-  storeName: string
+  storeName: string,
 ): Promise<Array<{ key: string; value: T }>> {
   const db = await openLegacyDb(dbName);
   if (!db) return [];
@@ -119,7 +129,7 @@ async function getAllFromStoreWithKeys<T>(
     return [];
   }
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readonly');
+    const tx = db.transaction(storeName, "readonly");
     const store = tx.objectStore(storeName);
     const valuesRequest = store.getAll();
     const keysRequest = store.getAllKeys();
@@ -144,14 +154,14 @@ async function getAllFromStoreWithKeys<T>(
 
 async function decryptLegacyNote(
   key: CryptoKey,
-  payload: LegacyEncryptedNotePayload
+  payload: LegacyEncryptedNotePayload,
 ): Promise<{ content: string; updatedAt: string }> {
   const iv = base64ToBytes(payload.iv);
   const ciphertext = base64ToBytes(payload.data);
   const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
+    { name: "AES-GCM", iv },
     key,
-    ciphertext
+    ciphertext,
   );
   return JSON.parse(decodeUtf8(new Uint8Array(decrypted))) as {
     content: string;
@@ -161,34 +171,32 @@ async function decryptLegacyNote(
 
 async function decryptLegacySynced(
   key: CryptoKey,
-  payload: LegacySyncedPayload
+  payload: LegacySyncedPayload,
 ): Promise<{ content: string }> {
   const iv = base64ToBytes(payload.iv);
   const ciphertext = base64ToBytes(payload.data);
   const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
+    { name: "AES-GCM", iv },
     key,
-    ciphertext
+    ciphertext,
   );
-  return JSON.parse(decodeUtf8(new Uint8Array(decrypted))) as { content: string };
+  return JSON.parse(decodeUtf8(new Uint8Array(decrypted))) as {
+    content: string;
+  };
 }
 
 async function decryptLegacyImage(
   key: CryptoKey,
-  payload: LegacyImagePayload
+  payload: LegacyImagePayload,
 ): Promise<ArrayBuffer> {
   const iv = base64ToBytes(payload.iv);
   const ciphertext = base64ToBytes(payload.data);
-  return crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
-    key,
-    ciphertext
-  );
+  return crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
 }
 
 function chooseWinner(
   a: LegacyNoteCandidate,
-  b: LegacyNoteCandidate
+  b: LegacyNoteCandidate,
 ): LegacyNoteCandidate {
   const aTime = new Date(a.updatedAt).getTime();
   const bTime = new Date(b.updatedAt).getTime();
@@ -200,7 +208,7 @@ function chooseWinner(
 export async function migrateLegacyData({
   targetKey,
   localKey,
-  cloudKey
+  cloudKey,
 }: MigrationOptions): Promise<boolean> {
   if (hasMigrationFlag()) {
     return false;
@@ -208,26 +216,26 @@ export async function migrateLegacyData({
 
   const candidates = new Map<string, LegacyNoteCandidate>();
   const localKeyId = localKey ? await computeKeyId(localKey) : null;
-  const cloudKeyId = cloudKey ? 'legacy' : null;
+  const cloudKeyId = cloudKey ? "legacy" : null;
 
   if (localKey) {
     const entries = await getAllFromStoreWithKeys<LegacyEncryptedNotePayload>(
       LEGACY_NOTES_DB,
-      LEGACY_NOTES_STORE
+      LEGACY_NOTES_STORE,
     );
 
     for (const entry of entries) {
       if (!entry.value || entry.value.version !== 1) continue;
       const note = await decryptLegacyNote(localKey, entry.value);
       const candidate: LegacyNoteCandidate = {
-        source: 'local',
+        source: "local",
         date: entry.key,
         content: note.content,
         updatedAt: note.updatedAt,
         revision: 1,
         keyId: localKeyId,
         deleted: false,
-        dirty: true
+        dirty: true,
       };
       candidates.set(entry.key, candidate);
     }
@@ -236,7 +244,7 @@ export async function migrateLegacyData({
   if (cloudKey) {
     const entries = await getAllFromStoreWithKeys<LegacySyncedPayload>(
       LEGACY_SYNCED_DB,
-      LEGACY_SYNCED_STORE
+      LEGACY_SYNCED_STORE,
     );
 
     for (const entry of entries) {
@@ -244,7 +252,7 @@ export async function migrateLegacyData({
       if (!payload || !payload.iv || !payload.data) continue;
       const decrypted = await decryptLegacySynced(cloudKey, payload);
       const candidate: LegacyNoteCandidate = {
-        source: 'synced',
+        source: "synced",
         date: entry.key,
         content: decrypted.content,
         updatedAt: payload.updatedAt,
@@ -253,7 +261,7 @@ export async function migrateLegacyData({
         serverUpdatedAt: payload.serverUpdatedAt ?? null,
         deleted: payload.deleted ?? false,
         dirty: payload.dirty ?? false,
-        keyId: cloudKeyId
+        keyId: cloudKeyId,
       };
 
       const existing = candidates.get(entry.key);
@@ -264,7 +272,8 @@ export async function migrateLegacyData({
         const merged: LegacyNoteCandidate = {
           ...winner,
           remoteId: candidate.remoteId ?? existing.remoteId ?? null,
-          serverUpdatedAt: candidate.serverUpdatedAt ?? existing.serverUpdatedAt ?? null
+          serverUpdatedAt:
+            candidate.serverUpdatedAt ?? existing.serverUpdatedAt ?? null,
         };
         candidates.set(entry.key, merged);
       }
@@ -273,11 +282,16 @@ export async function migrateLegacyData({
 
   for (const candidate of candidates.values()) {
     const key =
-      candidate.source === 'synced' && cloudKey ? cloudKey : localKey ?? targetKey;
+      candidate.source === "synced" && cloudKey
+        ? cloudKey
+        : (localKey ?? targetKey);
     if (!key || !candidate.keyId) {
       continue;
     }
-    const { ciphertext, nonce } = await encryptNoteContent(key, candidate.content);
+    const { ciphertext, nonce } = await encryptNoteContent(
+      key,
+      candidate.content,
+    );
     const record: NoteRecord = {
       version: 1,
       date: candidate.date,
@@ -285,11 +299,14 @@ export async function migrateLegacyData({
       ciphertext,
       nonce,
       updatedAt: candidate.updatedAt,
-      deleted: candidate.deleted
+      deleted: candidate.deleted,
     };
 
-    const pendingOp: NoteMetaRecord['pendingOp'] =
-      candidate.deleted ? 'delete' : candidate.source === 'local' || candidate.dirty ? 'upsert' : null;
+    const pendingOp: NoteMetaRecord["pendingOp"] = candidate.deleted
+      ? "delete"
+      : candidate.source === "local" || candidate.dirty
+        ? "upsert"
+        : null;
 
     const meta: NoteMetaRecord = {
       date: candidate.date,
@@ -297,7 +314,7 @@ export async function migrateLegacyData({
       remoteId: candidate.remoteId ?? null,
       serverUpdatedAt: candidate.serverUpdatedAt ?? null,
       lastSyncedAt: null,
-      pendingOp
+      pendingOp,
     };
 
     await setNoteAndMeta(record, meta);
@@ -306,13 +323,15 @@ export async function migrateLegacyData({
   if (localKey) {
     const legacyMetas = await getAllFromStore<NoteImage>(
       LEGACY_IMAGES_DB,
-      LEGACY_IMAGES_META_STORE
+      LEGACY_IMAGES_META_STORE,
     );
     const payloadEntries = await getAllFromStoreWithKeys<LegacyImagePayload>(
       LEGACY_IMAGES_DB,
-      LEGACY_IMAGES_STORE
+      LEGACY_IMAGES_STORE,
     );
-    const payloadMap = new Map(payloadEntries.map((entry) => [entry.key, entry.value]));
+    const payloadMap = new Map(
+      payloadEntries.map((entry) => [entry.key, entry.value]),
+    );
     const imageKey = await deriveImageKey(localKey);
     const imageKeyId = localKeyId ?? (await computeKeyId(localKey));
 
@@ -320,20 +339,23 @@ export async function migrateLegacyData({
       const payload = payloadMap.get(meta.id);
       if (!payload || payload.version !== 1) continue;
       const decrypted = await decryptLegacyImage(localKey, payload);
-      const { ciphertext, nonce } = await encryptImageBuffer(imageKey, decrypted);
+      const { ciphertext, nonce } = await encryptImageBuffer(
+        imageKey,
+        decrypted,
+      );
 
       const record: ImageRecord = {
         version: 1,
         id: meta.id,
         keyId: imageKeyId,
         ciphertext,
-        nonce
+        nonce,
       };
 
-      const sha256Buffer = await crypto.subtle.digest('SHA-256', decrypted);
+      const sha256Buffer = await crypto.subtle.digest("SHA-256", decrypted);
       const sha256 = Array.from(new Uint8Array(sha256Buffer))
-        .map((byte) => byte.toString(16).padStart(2, '0'))
-        .join('');
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
 
       const imageMeta: ImageMetaRecord = {
         id: meta.id,
@@ -347,7 +369,7 @@ export async function migrateLegacyData({
         createdAt: meta.createdAt,
         sha256,
         keyId: imageKeyId,
-        pendingOp: 'upload'
+        pendingOp: "upload",
       };
 
       await storeImageAndMeta(record, imageMeta);

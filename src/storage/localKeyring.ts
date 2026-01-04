@@ -1,5 +1,5 @@
-import { STORAGE_PREFIX } from '../utils/constants';
-import { base64ToBytes, bytesToBase64, randomBytes } from './cryptoUtils';
+import { STORAGE_PREFIX } from "../utils/constants";
+import { base64ToBytes, bytesToBase64, randomBytes } from "./cryptoUtils";
 
 const KEYRING_STORAGE_KEY = `${STORAGE_PREFIX}keyring_v1`;
 
@@ -11,7 +11,7 @@ interface KeyringEntry {
 type KeyringStore = Record<string, KeyringEntry>;
 
 function loadKeyring(): KeyringStore {
-  if (typeof window === 'undefined') return {};
+  if (typeof window === "undefined") return {};
   const raw = localStorage.getItem(KEYRING_STORAGE_KEY);
   if (!raw) return {};
   try {
@@ -22,7 +22,7 @@ function loadKeyring(): KeyringStore {
 }
 
 function saveKeyring(store: KeyringStore): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   localStorage.setItem(KEYRING_STORAGE_KEY, JSON.stringify(store));
 }
 
@@ -33,30 +33,30 @@ export function listLocalKeyIds(): string[] {
 export async function storeLocalWrappedKey(
   keyId: string,
   dek: CryptoKey,
-  localVaultKey: CryptoKey
+  localVaultKey: CryptoKey,
 ): Promise<void> {
-  const raw = await crypto.subtle.exportKey('raw', dek);
+  const raw = await crypto.subtle.exportKey("raw", dek);
   const iv = randomBytes(12);
   const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: "AES-GCM", iv },
     localVaultKey,
-    raw
+    raw,
   );
   const wrapped = {
     iv: bytesToBase64(iv),
-    data: bytesToBase64(new Uint8Array(encrypted))
+    data: bytesToBase64(new Uint8Array(encrypted)),
   };
   const store = loadKeyring();
   store[keyId] = {
     wrappedDek: wrapped.data,
-    dekIv: wrapped.iv
+    dekIv: wrapped.iv,
   };
   saveKeyring(store);
 }
 
 export async function restoreLocalWrappedKey(
   keyId: string,
-  localVaultKey: CryptoKey
+  localVaultKey: CryptoKey,
 ): Promise<CryptoKey | null> {
   const store = loadKeyring();
   const entry = store[keyId];
@@ -64,15 +64,15 @@ export async function restoreLocalWrappedKey(
   const iv = base64ToBytes(entry.dekIv);
   const data = base64ToBytes(entry.wrappedDek);
   const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
+    { name: "AES-GCM", iv },
     localVaultKey,
-    data
+    data,
   );
   return crypto.subtle.importKey(
-    'raw',
+    "raw",
     decrypted,
-    { name: 'AES-GCM', length: 256 },
+    { name: "AES-GCM", length: 256 },
     true,
-    ['encrypt', 'decrypt']
+    ["encrypt", "decrypt"],
   );
 }

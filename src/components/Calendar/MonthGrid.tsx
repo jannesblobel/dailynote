@@ -1,14 +1,15 @@
-import { useMemo } from 'react';
-import { DayCell } from './DayCell';
+import { useMemo } from "react";
+import { DayCell } from "./DayCell";
 import {
   getDaysInMonth,
   getFirstDayOfMonth,
   getMonthName,
   getWeekdays,
   formatDate,
-  getDayCellState
-} from '../../utils/date';
-import { DayCellState } from '../../types';
+  getDayCellState,
+} from "../../utils/date";
+import { DayCellState } from "../../types";
+import styles from "./MonthGrid.module.css";
 
 interface MonthGridProps {
   year: number;
@@ -18,7 +19,13 @@ interface MonthGridProps {
   now?: Date;
 }
 
-export function MonthGrid({ year, month, hasNote, onDayClick, now }: MonthGridProps) {
+export function MonthGrid({
+  year,
+  month,
+  hasNote,
+  onDayClick,
+  now,
+}: MonthGridProps) {
   const weekdays = getWeekdays();
   const monthName = getMonthName(month);
   const resolvedNow = now ?? new Date();
@@ -45,17 +52,29 @@ export function MonthGrid({ year, month, hasNote, onDayClick, now }: MonthGridPr
   }, [year, month]);
 
   return (
-    <div className="month-grid" data-current-month={isCurrentMonth ? 'true' : undefined}>
-      <div className="month-grid__header">{monthName}</div>
-      <div className="month-grid__weekdays">
-        {weekdays.map(day => (
-          <div key={day} className="month-grid__weekday">{day}</div>
+    <div
+      className={styles.monthGrid}
+      data-current-month={isCurrentMonth ? "true" : undefined}
+    >
+      <div className={styles.header}>{monthName}</div>
+      <div className={styles.weekdays}>
+        {weekdays.map((day) => (
+          <div key={day} className={styles.weekday}>
+            {day}
+          </div>
         ))}
       </div>
-      <div className="month-grid__days">
+      <div className={styles.days}>
         {days.map((cell, index) => {
           if (cell.day === null || cell.date === null) {
-            return <DayCell key={index} day={null} state={DayCellState.Empty} hasNote={false} />;
+            return (
+              <DayCell
+                key={index}
+                day={null}
+                state={DayCellState.Empty}
+                hasNote={false}
+              />
+            );
           }
 
           const dateStr = formatDate(cell.date);

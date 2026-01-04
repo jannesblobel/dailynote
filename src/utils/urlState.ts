@@ -1,6 +1,6 @@
-import { ViewType, type UrlState } from '../types';
-import { URL_PARAMS } from './constants';
-import { getTodayString, isFuture, parseDate } from './date';
+import { ViewType, type UrlState } from "../types";
+import { URL_PARAMS } from "./constants";
+import { getTodayString, isFuture, parseDate } from "./date";
 
 interface ResolvedUrlState {
   state: UrlState;
@@ -15,36 +15,40 @@ export function resolveUrlState(search: string): ResolvedUrlState {
 
   if (params.has(URL_PARAMS.YEAR)) {
     const yearParam = params.get(URL_PARAMS.YEAR);
-    const year = parseInt(yearParam ?? '', 10) || currentYear;
+    const year = parseInt(yearParam ?? "", 10) || currentYear;
     return {
       state: { view: ViewType.Calendar, date: null, year },
       canonicalSearch: `?${URL_PARAMS.YEAR}=${year}`,
-      needsRedirect: false
+      needsRedirect: false,
     };
   }
 
   if (params.has(URL_PARAMS.DATE)) {
-    const dateParam = params.get(URL_PARAMS.DATE) ?? '';
+    const dateParam = params.get(URL_PARAMS.DATE) ?? "";
     const parsed = parseDate(dateParam);
     if (parsed && !isFuture(dateParam)) {
       return {
-        state: { view: ViewType.Note, date: dateParam, year: parsed.getFullYear() },
+        state: {
+          view: ViewType.Note,
+          date: dateParam,
+          year: parsed.getFullYear(),
+        },
         canonicalSearch: `?${URL_PARAMS.DATE}=${dateParam}`,
-        needsRedirect: false
+        needsRedirect: false,
       };
     }
 
     return {
       state: { view: ViewType.Note, date: today, year: currentYear },
       canonicalSearch: `?${URL_PARAMS.DATE}=${today}`,
-      needsRedirect: true
+      needsRedirect: true,
     };
   }
 
   return {
     state: { view: ViewType.Calendar, date: null, year: currentYear },
-    canonicalSearch: '/',
-    needsRedirect: false
+    canonicalSearch: "/",
+    needsRedirect: false,
   };
 }
 
@@ -57,5 +61,5 @@ export function serializeUrlState(state: UrlState): string {
     return `?${URL_PARAMS.DATE}=${state.date}`;
   }
 
-  return '/';
+  return "/";
 }

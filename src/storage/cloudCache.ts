@@ -1,5 +1,5 @@
-import { STORAGE_PREFIX } from '../utils/constants';
-import { base64ToBytes, bytesToBase64, randomBytes } from './cryptoUtils';
+import { STORAGE_PREFIX } from "../utils/constants";
+import { base64ToBytes, bytesToBase64, randomBytes } from "./cryptoUtils";
 
 const CLOUD_DEK_CACHE_KEY = `${STORAGE_PREFIX}cloud_dek_cache_v1`;
 const CACHE_IV_BYTES = 12;
@@ -11,19 +11,19 @@ interface CloudDekCachePayload {
 
 export async function cacheCloudDek(
   localVaultKey: CryptoKey,
-  cloudVaultKey: CryptoKey
+  cloudVaultKey: CryptoKey,
 ): Promise<void> {
   try {
-    const raw = await crypto.subtle.exportKey('raw', cloudVaultKey);
+    const raw = await crypto.subtle.exportKey("raw", cloudVaultKey);
     const iv = randomBytes(CACHE_IV_BYTES);
     const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
+      { name: "AES-GCM", iv },
       localVaultKey,
-      raw
+      raw,
     );
     const payload: CloudDekCachePayload = {
       iv: bytesToBase64(iv),
-      data: bytesToBase64(new Uint8Array(encrypted))
+      data: bytesToBase64(new Uint8Array(encrypted)),
     };
     localStorage.setItem(CLOUD_DEK_CACHE_KEY, JSON.stringify(payload));
   } catch {
@@ -32,7 +32,7 @@ export async function cacheCloudDek(
 }
 
 export async function restoreCloudDek(
-  localVaultKey: CryptoKey
+  localVaultKey: CryptoKey,
 ): Promise<CryptoKey | null> {
   const raw = localStorage.getItem(CLOUD_DEK_CACHE_KEY);
   if (!raw) return null;
@@ -42,16 +42,16 @@ export async function restoreCloudDek(
     const iv = base64ToBytes(parsed.iv);
     const data = base64ToBytes(parsed.data);
     const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv },
+      { name: "AES-GCM", iv },
       localVaultKey,
-      data
+      data,
     );
     return crypto.subtle.importKey(
-      'raw',
+      "raw",
       decrypted,
-      { name: 'AES-GCM', length: 256 },
+      { name: "AES-GCM", length: 256 },
       true,
-      ['encrypt', 'decrypt']
+      ["encrypt", "decrypt"],
     );
   } catch {
     return null;

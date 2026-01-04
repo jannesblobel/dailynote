@@ -1,8 +1,12 @@
-import type { NoteImage } from '../types';
-import type { ImageRepository } from './imageRepository';
-import { deriveImageKey, decryptImageBuffer, encryptImageBuffer } from './unifiedImageCrypto';
-import type { ImageMetaRecord, ImageRecord } from './unifiedDb';
-import type { KeyringProvider } from './unifiedNoteRepository';
+import type { NoteImage } from "../types";
+import type { ImageRepository } from "./imageRepository";
+import {
+  deriveImageKey,
+  decryptImageBuffer,
+  encryptImageBuffer,
+} from "./unifiedImageCrypto";
+import type { ImageMetaRecord, ImageRecord } from "./unifiedDb";
+import type { KeyringProvider } from "./unifiedNoteRepository";
 import {
   deleteImageRecord,
   deleteImageRecords,
@@ -11,38 +15,40 @@ import {
   getImageRecord,
   getMetaByDate,
   setImageMeta,
-  storeImageAndMeta
-} from './unifiedImageStore';
+  storeImageAndMeta,
+} from "./unifiedImageStore";
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 async function computeSha256Hex(buffer: ArrayBuffer): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new Uint8Array(buffer));
+  const digest = await crypto.subtle.digest("SHA-256", new Uint8Array(buffer));
   return bytesToHex(new Uint8Array(digest));
 }
 
 async function encryptImageBlob(
   imageKey: CryptoKey,
-  blob: Blob
+  blob: Blob,
 ): Promise<{ record: ImageRecord; sha256: string; size: number }> {
-  const buffer = await (blob.arrayBuffer ? blob.arrayBuffer() : blobToArrayBuffer(blob));
+  const buffer = await (blob.arrayBuffer
+    ? blob.arrayBuffer()
+    : blobToArrayBuffer(blob));
   const bytes = new Uint8Array(buffer);
   const sha256 = await computeSha256Hex(buffer);
   const { ciphertext, nonce } = await encryptImageBuffer(imageKey, bytes);
   return {
     record: {
       version: 1,
-      id: '',
-      keyId: '',
+      id: "",
+      keyId: "",
       ciphertext,
-      nonce
+      nonce,
     },
     sha256,
-    size: buffer.byteLength
+    size: buffer.byteLength,
   };
 }
 
@@ -53,7 +59,7 @@ async function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
       if (reader.result instanceof ArrayBuffer) {
         resolve(reader.result);
       } else {
-        reject(new Error('Unexpected FileReader result'));
+        reject(new Error("Unexpected FileReader result"));
       }
     };
     reader.onerror = () => reject(reader.error);
@@ -64,27 +70,26 @@ async function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
 async function decryptImagePayload(
   imageKey: CryptoKey,
   record: ImageRecord,
-  mimeType: string
+  mimeType: string,
 ): Promise<Blob> {
   const decrypted = await decryptImageBuffer(
     imageKey,
     record.ciphertext,
-    record.nonce
+    record.nonce,
   );
   return new Blob([decrypted], { type: mimeType });
 }
 
 function generateUuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
 
-
 export function createUnifiedImageRepository(
-  keyring: KeyringProvider
+  keyring: KeyringProvider,
 ): ImageRepository {
   const imageKeyCache = new Map<string, Promise<CryptoKey>>();
 
@@ -101,14 +106,14 @@ export function createUnifiedImageRepository(
     async upload(
       noteDate: string,
       file: Blob,
-      type: 'background' | 'inline',
+      type: "background" | "inline",
       filename: string,
-      options?: { width?: number; height?: number }
+      options?: { width?: number; height?: number },
     ): Promise<NoteImage> {
       const imageId = generateUuid();
       const imageKey = await getImageKey(keyring.activeKeyId);
       if (!imageKey) {
-        throw new Error('Image key unavailable');
+        throw new Error("Image key unavailable");
       }
       const { record, sha256, size } = await encryptImageBlob(imageKey, file);
 
@@ -117,23 +122,23 @@ export function createUnifiedImageRepository(
         noteDate,
         type,
         filename,
-        mimeType: file.type || 'application/octet-stream',
+        mimeType: file.type || "application/octet-stream",
         width: options?.width ?? 0,
         height: options?.height ?? 0,
         size,
         createdAt: new Date().toISOString(),
         sha256,
         keyId: keyring.activeKeyId,
-        pendingOp: 'upload'
+        pendingOp: "upload",
       };
 
       await storeImageAndMeta(
         {
           ...record,
           id: imageId,
-          keyId: keyring.activeKeyId
+          keyId: keyring.activeKeyId,
         },
-        meta
+        meta,
       );
 
       return {
@@ -145,7 +150,7 @@ export function createUnifiedImageRepository(
         width: meta.width,
         height: meta.height,
         size: meta.size,
-        createdAt: meta.createdAt
+        createdAt: meta.createdAt,
       };
     },
 
@@ -174,7 +179,7 @@ export function createUnifiedImageRepository(
       if (meta) {
         await setImageMeta({
           ...meta,
-          pendingOp: 'delete'
+          pendingOp: "delete",
         });
         await deleteImageRecord(imageId);
         return;
@@ -186,7 +191,7 @@ export function createUnifiedImageRepository(
     async getByNoteDate(noteDate: string): Promise<NoteImage[]> {
       const metas = await getMetaByDate(noteDate);
       return metas
-        .filter((meta) => meta.pendingOp !== 'delete')
+        .filter((meta) => meta.pendingOp !== "delete")
         .map((meta) => ({
           id: meta.id,
           noteDate: meta.noteDate,
@@ -196,7 +201,7 @@ export function createUnifiedImageRepository(
           width: meta.width,
           height: meta.height,
           size: meta.size,
-          createdAt: meta.createdAt
+          createdAt: meta.createdAt,
         }));
     },
 
@@ -212,11 +217,11 @@ export function createUnifiedImageRepository(
         metas.map(async (meta) => {
           await setImageMeta({
             ...meta,
-            pendingOp: 'delete'
+            pendingOp: "delete",
           });
           await deleteImageRecord(meta.id);
-        })
+        }),
       );
-    }
+    },
   };
 }

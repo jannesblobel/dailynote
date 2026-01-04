@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { SyncStatus } from '../types';
-import type { UnifiedSyncedNoteRepository } from '../storage/unifiedSyncedNoteRepository';
-import type { PendingOpsSummary, SyncService } from '../domain/sync';
-import { createSyncService, getPendingOpsSummary } from '../domain/sync';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { SyncStatus } from "../types";
+import type { UnifiedSyncedNoteRepository } from "../storage/unifiedSyncedNoteRepository";
+import type { PendingOpsSummary, SyncService } from "../domain/sync";
+import { createSyncService, getPendingOpsSummary } from "../domain/sync";
 
 interface UseSyncReturn {
   syncStatus: SyncStatus;
@@ -12,18 +12,20 @@ interface UseSyncReturn {
   pendingOps: PendingOpsSummary;
 }
 
-export function useSync(repository: UnifiedSyncedNoteRepository | null): UseSyncReturn {
+export function useSync(
+  repository: UnifiedSyncedNoteRepository | null,
+): UseSyncReturn {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncStatus.Idle);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [pendingOps, setPendingOps] = useState<PendingOpsSummary>({
     notes: 0,
     images: 0,
-    total: 0
+    total: 0,
   });
   const syncServiceRef = useRef<SyncService | null>(null);
   const pendingPollRef = useRef<number | null>(null);
   const scheduleStateUpdate = useCallback((fn: () => void) => {
-    if (typeof queueMicrotask === 'function') {
+    if (typeof queueMicrotask === "function") {
       queueMicrotask(fn);
       return;
     }
@@ -69,7 +71,9 @@ export function useSync(repository: UnifiedSyncedNoteRepository | null): UseSync
         window.clearInterval(pendingPollRef.current);
         pendingPollRef.current = null;
       }
-      scheduleStateUpdate(() => setPendingOps({ notes: 0, images: 0, total: 0 }));
+      scheduleStateUpdate(() =>
+        setPendingOps({ notes: 0, images: 0, total: 0 }),
+      );
       return;
     }
 
@@ -100,15 +104,21 @@ export function useSync(repository: UnifiedSyncedNoteRepository | null): UseSync
   }, [repository, refreshPendingOps, scheduleStateUpdate]);
 
   // Sync function with debounce
-  const triggerSync = useCallback((options?: { immediate?: boolean }) => {
-    syncServiceRef.current?.queueSync(options);
-    void refreshPendingOps();
-  }, [refreshPendingOps]);
+  const triggerSync = useCallback(
+    (options?: { immediate?: boolean }) => {
+      syncServiceRef.current?.queueSync(options);
+      void refreshPendingOps();
+    },
+    [refreshPendingOps],
+  );
 
-  const queueIdleSync = useCallback((options?: { delayMs?: number }) => {
-    syncServiceRef.current?.queueIdleSync(options);
-    void refreshPendingOps();
-  }, [refreshPendingOps]);
+  const queueIdleSync = useCallback(
+    (options?: { delayMs?: number }) => {
+      syncServiceRef.current?.queueIdleSync(options);
+      void refreshPendingOps();
+    },
+    [refreshPendingOps],
+  );
 
   useEffect(() => {
     if (!repository) return;
@@ -121,8 +131,8 @@ export function useSync(repository: UnifiedSyncedNoteRepository | null): UseSync
       setSyncStatus(SyncStatus.Offline);
     };
 
-    window.addEventListener('offline', handleOffline);
-    return () => window.removeEventListener('offline', handleOffline);
+    window.addEventListener("offline", handleOffline);
+    return () => window.removeEventListener("offline", handleOffline);
   }, []);
 
   useEffect(() => {
@@ -138,6 +148,6 @@ export function useSync(repository: UnifiedSyncedNoteRepository | null): UseSync
     lastSynced,
     triggerSync,
     queueIdleSync,
-    pendingOps
+    pendingOps,
   };
 }

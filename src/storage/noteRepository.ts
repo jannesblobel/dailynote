@@ -1,4 +1,4 @@
-import type { Note } from '../types';
+import type { Note } from "../types";
 
 export interface NoteRepository {
   get(date: string): Promise<Note | null>;

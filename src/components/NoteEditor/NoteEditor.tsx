@@ -1,10 +1,10 @@
-import { formatDateDisplay } from '../../utils/date';
-import { canEditNote } from '../../utils/noteRules';
-import { NoteEditorView } from './NoteEditorView';
-import { useContentEditableEditor } from './useContentEditableEditor';
-import { useSavingIndicator } from './useSavingIndicator';
-import { useInlineImageUpload, useInlineImageUrls } from './useInlineImages';
-import { useImageDragState } from './useImageDragState';
+import { formatDateDisplay } from "../../utils/date";
+import { canEditNote } from "../../utils/noteRules";
+import { NoteEditorView } from "./NoteEditorView";
+import { useContentEditableEditor } from "./useContentEditableEditor";
+import { useSavingIndicator } from "./useSavingIndicator";
+import { useInlineImageUpload, useInlineImageUrls } from "./useInlineImages";
+import { useImageDragState } from "./useImageDragState";
 
 interface NoteEditorProps {
   date: string;
@@ -14,7 +14,6 @@ interface NoteEditorProps {
   hasEdits: boolean;
   isDecrypting?: boolean;
   isContentReady: boolean;
-  onClose?: () => void;
 }
 
 export function NoteEditor({
@@ -25,30 +24,31 @@ export function NoteEditor({
   hasEdits,
   isDecrypting = false,
   isContentReady,
-  onClose
 }: NoteEditorProps) {
   const canEdit = canEditNote(date);
   const isEditable = canEdit && !isDecrypting && isContentReady;
   const formattedDate = formatDateDisplay(date);
-  const { showSaving, scheduleSavingIndicator } = useSavingIndicator(isEditable);
+  const { showSaving, scheduleSavingIndicator } =
+    useSavingIndicator(isEditable);
 
   const shouldShowSaving = isEditable && hasEdits && (showSaving || isClosing);
   const statusText = isDecrypting
-    ? 'Decrypting...'
+    ? "Decrypting..."
     : shouldShowSaving
-      ? 'Saving...'
+      ? "Saving..."
       : null;
-  const placeholderText = !isContentReady || isDecrypting
-    ? 'Loading...'
-    : isEditable
-      ? 'Write your note for today...'
-      : 'No note for this day';
+  const placeholderText =
+    !isContentReady || isDecrypting
+      ? "Loading..."
+      : isEditable
+        ? "Write your note for today..."
+        : "No note for this day";
 
   const { isDraggingImage, endImageDrag } = useImageDragState();
 
   const { onImageDrop } = useInlineImageUpload({
     date,
-    isEditable
+    isEditable,
   });
 
   const {
@@ -57,7 +57,7 @@ export function NoteEditor({
     handlePaste,
     handleDrop,
     handleDragOver,
-    handleClick
+    handleClick,
   } = useContentEditableEditor({
     content,
     isEditable,
@@ -65,13 +65,13 @@ export function NoteEditor({
     onChange,
     onUserInput: scheduleSavingIndicator,
     onImageDrop,
-    onDropComplete: endImageDrag
+    onDropComplete: endImageDrag,
   });
 
   useInlineImageUrls({
     date,
     content,
-    editorRef
+    editorRef,
   });
 
   return (
@@ -88,7 +88,6 @@ export function NoteEditor({
       onDragOver={handleDragOver}
       onClick={handleClick}
       isDraggingImage={isDraggingImage}
-      onClose={onClose}
     />
   );
 }

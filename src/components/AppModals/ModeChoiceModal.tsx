@@ -1,4 +1,7 @@
-import { Modal } from '../Modal';
+import { Modal } from "../Modal";
+import { Button } from "../Button";
+import { VaultPanel } from "../VaultPanel";
+import styles from "../VaultPanel/VaultPanel.module.css";
 
 interface ModeChoiceModalProps {
   isOpen: boolean;
@@ -9,32 +12,31 @@ interface ModeChoiceModalProps {
 export function ModeChoiceModal({
   isOpen,
   onConfirm,
-  onDismiss
+  onDismiss,
 }: ModeChoiceModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={() => {}} variant="overlay">
-      <div className="vault-unlock">
-        <div className="vault-unlock__card">
-          <h2 className="vault-unlock__title">Sync your notes?</h2>
-          <p className="vault-unlock__helper">
-            Create an account to back up and sync across devices.
-          </p>
-          <div className="vault-unlock__choices">
-            <button
-              className="button button--primary vault-unlock__button"
-              onClick={onConfirm}
-            >
-              Sign in to sync
-            </button>
-            <button
-              className="button button--ghost vault-unlock__button"
-              onClick={onDismiss}
-            >
-              Not now
-            </button>
-          </div>
+    <Modal isOpen={isOpen} onClose={onDismiss}>
+      <VaultPanel
+        title="Sync your notes?"
+        helper="Create an account to back up and sync across devices."
+      >
+        <div className={styles.choices}>
+          <Button
+            className={styles.actionButton}
+            variant="primary"
+            onClick={onConfirm}
+          >
+            Sign in to sync
+          </Button>
+          <Button
+            className={styles.actionButton}
+            variant="ghost"
+            onClick={onDismiss}
+          >
+            Not now
+          </Button>
         </div>
-      </div>
+      </VaultPanel>
     </Modal>
   );
 }

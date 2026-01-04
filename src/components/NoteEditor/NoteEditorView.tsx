@@ -1,5 +1,13 @@
-import type { ClipboardEvent, DragEvent, FormEvent, MouseEvent, RefObject } from 'react';
-import { Button } from '../Button';
+import type {
+  ClipboardEvent,
+  DragEvent,
+  FormEvent,
+  MouseEvent,
+  RefObject,
+} from "react";
+import { NoteEditorHeader } from "./NoteEditorHeader";
+import { NoteEditorContent } from "./NoteEditorContent";
+import styles from "./NoteEditor.module.css";
 
 interface NoteEditorViewProps {
   formattedDate: string;
@@ -14,7 +22,6 @@ interface NoteEditorViewProps {
   onDragOver?: (event: DragEvent<HTMLDivElement>) => void;
   onClick?: (event: MouseEvent<HTMLDivElement>) => void;
   isDraggingImage?: boolean;
-  onClose?: () => void;
 }
 
 export function NoteEditorView({
@@ -30,50 +37,22 @@ export function NoteEditorView({
   onDragOver,
   onClick,
   isDraggingImage = false,
-  onClose
 }: NoteEditorViewProps) {
   return (
-    <div className="note-editor">
+    <div className={styles.editor}>
       {isDraggingImage && (
-        <div className="note-editor__drag-overlay" aria-hidden="true">
-        </div>
+        <div className={styles.dragOverlay} aria-hidden="true"></div>
       )}
-      <div className="note-editor__header">
-        <div className="note-editor__header-title">
-          <span className="note-editor__date">{formattedDate}</span>
-          {showReadonlyBadge && (
-            <span className="note-editor__readonly-badge">Read only</span>
-          )}
-          <span
-            className={`note-editor__saving${statusText ? ' note-editor__saving--visible' : ''}`}
-            aria-live="polite"
-          >
-            {statusText ?? ''}
-          </span>
-        </div>
-        {onClose && (
-          <Button
-            className="note-editor__close"
-            icon
-            onClick={onClose}
-            aria-label="Close"
-          >
-            ✕
-          </Button>
-        )}
-      </div>
-      <div className="note-editor__body">
-        <div
-          ref={editorRef}
-          className={`note-editor__content${!isEditable ? ' note-editor__content--readonly' : ''}`}
-          data-placeholder={placeholderText}
-          contentEditable={isEditable}
-          tabIndex={isEditable ? 0 : -1}
-          autoFocus={isEditable}
-          suppressContentEditableWarning={true}
-          role="textbox"
-          aria-multiline="true"
-          aria-readonly={!isEditable}
+      <NoteEditorHeader
+        formattedDate={formattedDate}
+        showReadonlyBadge={showReadonlyBadge}
+        statusText={statusText}
+      />
+      <div className={styles.body}>
+        <NoteEditorContent
+          editorRef={editorRef}
+          isEditable={isEditable}
+          placeholderText={placeholderText}
           onInput={onInput}
           onPaste={onPaste}
           onDrop={onDrop}

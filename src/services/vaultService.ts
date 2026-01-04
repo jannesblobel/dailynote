@@ -1,7 +1,7 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { fetchUserKeyring, saveUserKeyringEntry } from '../storage/userKeyring';
-import type { UserKeyringEntry } from '../storage/userKeyring';
-import { computeKeyId } from '../storage/keyId';
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchUserKeyring, saveUserKeyringEntry } from "../storage/userKeyring";
+import type { UserKeyringEntry } from "../storage/userKeyring";
+import { computeKeyId } from "../storage/keyId";
 import {
   deriveKEK,
   generateDEK,
@@ -17,8 +17,8 @@ import {
   unlockWithPassword,
   tryUnlockWithDeviceKey,
   ensureDeviceWrappedKey,
-  canUseDeviceKey
-} from '../storage/vault';
+  canUseDeviceKey,
+} from "../storage/vault";
 
 export interface CloudVaultUnlockResult {
   vaultKey: CryptoKey | null;
@@ -53,11 +53,7 @@ export async function unlockCloudVault(options: {
 
   if (existingKeyrings.length && !nextKeyring.size) {
     for (const entry of existingKeyrings) {
-      const kek = await deriveKEK(
-        password,
-        entry.kdfSalt,
-        entry.kdfIterations
-      );
+      const kek = await deriveKEK(password, entry.kdfSalt, entry.kdfIterations);
       const unwrapped = await unwrapDEK(entry.wrappedDek, entry.dekIv, kek);
       nextKeyring.set(entry.keyId, unwrapped);
       if (entry.isPrimary && !nextPrimaryId) {
@@ -71,7 +67,7 @@ export async function unlockCloudVault(options: {
     if (nextPrimaryId) {
       await saveUserKeyringEntry(supabase, userId, {
         ...existingKeyrings[0],
-        isPrimary: true
+        isPrimary: true,
       });
     }
   }
@@ -79,7 +75,7 @@ export async function unlockCloudVault(options: {
   if (!existingKeyrings.length) {
     const salt = generateSalt();
     const kek = await deriveKEK(password, salt, DEFAULT_KDF_ITERATIONS);
-    dek = localDek ?? await generateDEK();
+    dek = localDek ?? (await generateDEK());
     const wrapped = await wrapDEK(dek, kek);
     const keyId = await computeKeyId(dek);
     const entry: UserKeyringEntry = {
@@ -89,7 +85,7 @@ export async function unlockCloudVault(options: {
       kdfSalt: salt,
       kdfIterations: DEFAULT_KDF_ITERATIONS,
       version: 1,
-      isPrimary: true
+      isPrimary: true,
     };
     await saveUserKeyringEntry(supabase, userId, entry);
     nextKeyring.set(keyId, dek);
@@ -109,7 +105,7 @@ export async function unlockCloudVault(options: {
         kdfSalt: salt,
         kdfIterations: DEFAULT_KDF_ITERATIONS,
         version: 1,
-        isPrimary: false
+        isPrimary: false,
       };
       await saveUserKeyringEntry(supabase, userId, entry);
       nextKeyring.set(localKeyId, localDek);
@@ -129,7 +125,7 @@ export async function unlockCloudVault(options: {
         kdfSalt: salt,
         kdfIterations: DEFAULT_KDF_ITERATIONS,
         version: 1,
-        isPrimary: false
+        isPrimary: false,
       };
       await saveUserKeyringEntry(supabase, userId, entry);
       nextKeyring.set(keyId, key);
@@ -151,7 +147,7 @@ export async function unlockCloudVault(options: {
   return {
     vaultKey: dek,
     keyring: nextKeyring,
-    primaryKeyId: nextPrimaryId
+    primaryKeyId: nextPrimaryId,
   };
 }
 
@@ -198,6 +194,6 @@ export async function unlockLocalVault(options: {
   await ensureDeviceWrappedKey(key);
   return {
     vaultKey: key,
-    hasVault: true
+    hasVault: true,
   };
 }

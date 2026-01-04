@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef } from 'react';
-import type { ClipboardEvent, DragEvent, MouseEvent } from 'react';
-import { linkifyElement } from '../../utils/linkify';
+import { useCallback, useEffect, useRef } from "react";
+import type { ClipboardEvent, DragEvent, MouseEvent } from "react";
+import { linkifyElement } from "../../utils/linkify";
 
-const TIMESTAMP_ATTR = 'data-timestamp';
-const TIMESTAMP_LABEL_ATTR = 'data-label';
+const TIMESTAMP_ATTR = "data-timestamp";
+const TIMESTAMP_LABEL_ATTR = "data-label";
 const ADDITION_WINDOW_MS = 10 * 60 * 1000;
 
 interface ContentEditableOptions {
@@ -29,9 +29,11 @@ function setCaretFromPoint(x: number, y: number) {
   if (document.caretRangeFromPoint) {
     range = document.caretRangeFromPoint(x, y);
   } else {
-    const caretPositionFromPoint = (document as Document & {
-      caretPositionFromPoint?: (x: number, y: number) => CaretPosition | null;
-    }).caretPositionFromPoint;
+    const caretPositionFromPoint = (
+      document as Document & {
+        caretPositionFromPoint?: (x: number, y: number) => CaretPosition | null;
+      }
+    ).caretPositionFromPoint;
     const position = caretPositionFromPoint?.(x, y);
     if (position) {
       range = document.createRange();
@@ -58,7 +60,9 @@ function insertNodeAtCursor(node: Node) {
   selection.addRange(range);
 }
 
-function saveCursorPosition(element: HTMLElement): { node: Node; offset: number } | null {
+function saveCursorPosition(
+  element: HTMLElement,
+): { node: Node; offset: number } | null {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return null;
   const range = selection.getRangeAt(0);
@@ -68,7 +72,7 @@ function saveCursorPosition(element: HTMLElement): { node: Node; offset: number 
 
 function restoreCursorPosition(
   element: HTMLElement,
-  saved: { node: Node; offset: number } | null
+  saved: { node: Node; offset: number } | null,
 ) {
   if (!saved) return;
   const selection = window.getSelection();
@@ -78,7 +82,10 @@ function restoreCursorPosition(
   if (element.contains(saved.node)) {
     try {
       const range = document.createRange();
-      range.setStart(saved.node, Math.min(saved.offset, saved.node.textContent?.length ?? 0));
+      range.setStart(
+        saved.node,
+        Math.min(saved.offset, saved.node.textContent?.length ?? 0),
+      );
       range.collapse(true);
       selection.removeAllRanges();
       selection.addRange(range);
@@ -105,34 +112,36 @@ function placeCaretAtEnd(element: HTMLElement) {
 
 function formatTimestampLabel(timestamp: string): string {
   const parsed = new Date(timestamp);
-  if (Number.isNaN(parsed.getTime())) return '';
-  const time = parsed.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit'
+  if (Number.isNaN(parsed.getTime())) return "";
+  const time = parsed.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
   });
   return time;
 }
 
 function createTimestampHr(timestamp: string): HTMLHRElement {
-  const hr = document.createElement('hr');
+  const hr = document.createElement("hr");
   hr.setAttribute(TIMESTAMP_ATTR, timestamp);
   const label = formatTimestampLabel(timestamp);
   if (label) {
     hr.setAttribute(TIMESTAMP_LABEL_ATTR, label);
   }
-  hr.setAttribute('contenteditable', 'false');
+  hr.setAttribute("contenteditable", "false");
   return hr;
 }
 
 function getLastEditTimestamp(element: HTMLElement): number | null {
   // Check for timestamp HR elements
-  const hrs = Array.from(element.querySelectorAll<HTMLHRElement>(`hr[${TIMESTAMP_ATTR}]`));
+  const hrs = Array.from(
+    element.querySelectorAll<HTMLHRElement>(`hr[${TIMESTAMP_ATTR}]`),
+  );
   if (hrs.length === 0) return null;
-  
+
   const timestamps = hrs
-    .map(hr => Date.parse(hr.getAttribute(TIMESTAMP_ATTR) || ''))
-    .filter(ts => !Number.isNaN(ts));
-  
+    .map((hr) => Date.parse(hr.getAttribute(TIMESTAMP_ATTR) || ""))
+    .filter((ts) => !Number.isNaN(ts));
+
   if (timestamps.length === 0) return null;
   return Math.max(...timestamps);
 }
@@ -144,10 +153,10 @@ export function useContentEditableEditor({
   onChange,
   onUserInput,
   onImageDrop,
-  onDropComplete
+  onDropComplete,
 }: ContentEditableOptions) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const lastContentRef = useRef('');
+  const lastContentRef = useRef("");
   const isLocalEditRef = useRef(false);
   const isEditableRef = useRef(isEditable);
   const onChangeRef = useRef(onChange);
@@ -162,24 +171,26 @@ export function useContentEditableEditor({
   const insertTimestampHrIfNeeded = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
-    
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
-    
+
     const range = selection.getRangeAt(0);
-    
+
     // Find the block element containing the cursor
     let container = range.startContainer;
     if (container.nodeType === Node.TEXT_NODE) {
       container = container.parentNode as Node;
     }
-    
+
     // Find the closest block-level element (p or div)
     let currentBlock: Element | null = null;
     let current: Node | null = container;
     while (current && current !== el) {
-      if (current instanceof Element && 
-          (current.tagName === 'P' || current.tagName === 'DIV')) {
+      if (
+        current instanceof Element &&
+        (current.tagName === "P" || current.tagName === "DIV")
+      ) {
         currentBlock = current;
         break;
       }
@@ -189,29 +200,31 @@ export function useContentEditableEditor({
     if (!currentBlock && el.contains(container)) {
       currentBlock = el;
     }
-    
+
     // If we're in a different block than last time (or first edit)
     if (currentBlock && currentBlock !== lastEditedBlockRef.current) {
       const now = Date.now();
       const lastEdit = getLastEditTimestamp(el);
-      
+
       // Check if we need to insert a timestamp (>10min since last edit, or first edit)
-      if (!hasInsertedTimestampRef.current && 
-          (lastEdit === null || now - lastEdit > ADDITION_WINDOW_MS)) {
+      if (
+        !hasInsertedTimestampRef.current &&
+        (lastEdit === null || now - lastEdit > ADDITION_WINDOW_MS)
+      ) {
         const timestamp = new Date(now).toISOString();
         const hr = createTimestampHr(timestamp);
-        
+
         if (currentBlock === el) {
           el.insertBefore(hr, el.firstChild);
         } else {
           // Insert before the current block element
           currentBlock.parentNode?.insertBefore(hr, currentBlock);
         }
-        
+
         lastUserInputRef.current = now;
         hasInsertedTimestampRef.current = true;
       }
-      
+
       lastEditedBlockRef.current = currentBlock;
     }
   }, []);
@@ -219,12 +232,14 @@ export function useContentEditableEditor({
   const updateTimestampLabels = useCallback((element?: HTMLElement) => {
     const el = element ?? editorRef.current;
     if (!el) return;
-    
-    const hrs = Array.from(el.querySelectorAll<HTMLHRElement>(`hr[${TIMESTAMP_ATTR}]`));
+
+    const hrs = Array.from(
+      el.querySelectorAll<HTMLHRElement>(`hr[${TIMESTAMP_ATTR}]`),
+    );
     for (const hr of hrs) {
       const timestamp = hr.getAttribute(TIMESTAMP_ATTR);
       if (!timestamp) continue;
-      
+
       const label = formatTimestampLabel(timestamp);
       if (label) {
         if (hr.getAttribute(TIMESTAMP_LABEL_ATTR) !== label) {
@@ -239,9 +254,13 @@ export function useContentEditableEditor({
   const updateEmptyState = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
-    const hasText = (el.textContent ?? '').trim().length > 0;
-    const hasImages = el.querySelector('img') !== null;
-    el.classList.toggle('is-empty', !hasText && !hasImages);
+    const hasText = (el.textContent ?? "").trim().length > 0;
+    const hasImages = el.querySelector("img") !== null;
+    if (!hasText && !hasImages) {
+      el.setAttribute("data-empty", "true");
+    } else {
+      el.removeAttribute("data-empty");
+    }
   }, []);
 
   useEffect(() => {
@@ -258,7 +277,7 @@ export function useContentEditableEditor({
   useEffect(() => {
     const el = editorRef.current;
     if (!el) return;
-    el.setAttribute('data-placeholder', placeholderText);
+    el.setAttribute("data-placeholder", placeholderText);
   }, [placeholderText]);
 
   useEffect(() => {
@@ -268,7 +287,7 @@ export function useContentEditableEditor({
     // This prevents scroll jumps on mobile caused by re-setting innerHTML
     if (isLocalEditRef.current) {
       isLocalEditRef.current = false;
-      lastContentRef.current = content || '';
+      lastContentRef.current = content || "";
       updateEmptyState();
       return;
     }
@@ -277,7 +296,7 @@ export function useContentEditableEditor({
       updateTimestampLabels(el);
       return;
     }
-    const nextContent = content || '';
+    const nextContent = content || "";
     if (nextContent === el.innerHTML) {
       lastContentRef.current = nextContent;
       updateEmptyState();
@@ -300,8 +319,8 @@ export function useContentEditableEditor({
     if (hasAutoFocusedRef.current) return;
 
     el.focus();
-    const hasText = (el.textContent ?? '').trim().length > 0;
-    const hasImages = el.querySelector('img') !== null;
+    const hasText = (el.textContent ?? "").trim().length > 0;
+    const hasImages = el.querySelector("img") !== null;
     if (hasText || hasImages) {
       placeCaretAtEnd(el);
     }
@@ -312,18 +331,21 @@ export function useContentEditableEditor({
     if (!isEditableRef.current) return;
     const el = editorRef.current;
     if (!el) return;
-    
+
     // Check if we should insert a timestamp for this edit
     insertTimestampHrIfNeeded();
-    
+
     // Track last user input time
     const now = Date.now();
-    if (lastUserInputRef.current && now - lastUserInputRef.current > ADDITION_WINDOW_MS) {
+    if (
+      lastUserInputRef.current &&
+      now - lastUserInputRef.current > ADDITION_WINDOW_MS
+    ) {
       // More than 10 minutes passed, allow inserting timestamp on next block change
       hasInsertedTimestampRef.current = false;
     }
     lastUserInputRef.current = now;
-    
+
     updateEmptyState();
 
     // Convert --- to timestamped <hr>
@@ -332,7 +354,7 @@ export function useContentEditableEditor({
     const textNodesToReplace: Text[] = [];
     let node;
     while ((node = walker.nextNode())) {
-      const text = (node.textContent ?? '').trim();
+      const text = (node.textContent ?? "").trim();
       if (hrPattern.test(text)) {
         textNodesToReplace.push(node as Text);
       }
@@ -340,7 +362,7 @@ export function useContentEditableEditor({
     for (const textNode of textNodesToReplace) {
       const timestamp = new Date().toISOString();
       const hr = createTimestampHr(timestamp);
-      const br = document.createElement('br');
+      const br = document.createElement("br");
       const parent = textNode.parentNode;
       if (parent) {
         parent.replaceChild(hr, textNode);
@@ -369,7 +391,7 @@ export function useContentEditableEditor({
           }
         } else if (didLinkify) {
           // Find the last anchor and place cursor after it
-          const anchors = el.querySelectorAll('a');
+          const anchors = el.querySelectorAll("a");
           if (anchors.length > 0) {
             const lastAnchor = anchors[anchors.length - 1];
             const range = document.createRange();
@@ -384,9 +406,9 @@ export function useContentEditableEditor({
       }
     }
 
-    const hasText = (el.textContent ?? '').trim().length > 0;
-    const hasImages = el.querySelector('img') !== null;
-    const html = hasText || hasImages ? el.innerHTML : '';
+    const hasText = (el.textContent ?? "").trim().length > 0;
+    const hasImages = el.querySelector("img") !== null;
+    const html = hasText || hasImages ? el.innerHTML : "";
     if (html === lastContentRef.current) {
       return;
     }
@@ -397,94 +419,100 @@ export function useContentEditableEditor({
     onUserInputRef.current?.();
   }, [insertTimestampHrIfNeeded, updateEmptyState, updateTimestampLabels]);
 
-  const handlePaste = useCallback((event: ClipboardEvent<HTMLDivElement>) => {
-    if (!isEditableRef.current) return;
-    const dropHandler = onImageDropRef.current;
-    if (!dropHandler || !event.clipboardData) return;
+  const handlePaste = useCallback(
+    (event: ClipboardEvent<HTMLDivElement>) => {
+      if (!isEditableRef.current) return;
+      const dropHandler = onImageDropRef.current;
+      if (!dropHandler || !event.clipboardData) return;
 
-    const items = Array.from(event.clipboardData.items);
-    const imageItem = items.find((item) => item.type.startsWith('image/'));
-    if (!imageItem) return;
+      const items = Array.from(event.clipboardData.items);
+      const imageItem = items.find((item) => item.type.startsWith("image/"));
+      if (!imageItem) return;
 
-    const file = imageItem.getAsFile();
-    if (!file) return;
+      const file = imageItem.getAsFile();
+      if (!file) return;
 
-    event.preventDefault();
+      event.preventDefault();
 
-    const placeholder = document.createElement('img');
-    placeholder.setAttribute('data-image-id', 'uploading');
-    placeholder.setAttribute('alt', 'Uploading...');
-    insertNodeAtCursor(placeholder);
-    handleInput();
+      const placeholder = document.createElement("img");
+      placeholder.setAttribute("data-image-id", "uploading");
+      placeholder.setAttribute("alt", "Uploading...");
+      insertNodeAtCursor(placeholder);
+      handleInput();
 
-    dropHandler(file)
-      .then(({ id, width, height, filename }) => {
-        placeholder.setAttribute('data-image-id', id);
-        placeholder.setAttribute('alt', filename);
-        placeholder.setAttribute('width', String(width));
-        placeholder.setAttribute('height', String(height));
-      })
-      .catch((error) => {
-        console.error('Failed to upload pasted image:', error);
-        placeholder.remove();
-      })
-      .finally(() => {
-        onDropCompleteRef.current?.();
-        updateEmptyState();
-        handleInput();
-      });
-  }, [handleInput, updateEmptyState]);
+      dropHandler(file)
+        .then(({ id, width, height, filename }) => {
+          placeholder.setAttribute("data-image-id", id);
+          placeholder.setAttribute("alt", filename);
+          placeholder.setAttribute("width", String(width));
+          placeholder.setAttribute("height", String(height));
+        })
+        .catch((error) => {
+          console.error("Failed to upload pasted image:", error);
+          placeholder.remove();
+        })
+        .finally(() => {
+          onDropCompleteRef.current?.();
+          updateEmptyState();
+          handleInput();
+        });
+    },
+    [handleInput, updateEmptyState],
+  );
 
-  const handleDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
-    if (!isEditableRef.current) return;
-    const dropHandler = onImageDropRef.current;
-    const files = event.dataTransfer?.files;
-    if (!dropHandler || !files || files.length === 0) return;
+  const handleDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (!isEditableRef.current) return;
+      const dropHandler = onImageDropRef.current;
+      const files = event.dataTransfer?.files;
+      if (!dropHandler || !files || files.length === 0) return;
 
-    const file = files[0];
-    if (!file.type.startsWith('image/')) return;
+      const file = files[0];
+      if (!file.type.startsWith("image/")) return;
 
-    event.preventDefault();
-    setCaretFromPoint(event.clientX, event.clientY);
+      event.preventDefault();
+      setCaretFromPoint(event.clientX, event.clientY);
 
-    const placeholder = document.createElement('img');
-    placeholder.setAttribute('data-image-id', 'uploading');
-    placeholder.setAttribute('alt', 'Uploading...');
-    insertNodeAtCursor(placeholder);
-    handleInput();
+      const placeholder = document.createElement("img");
+      placeholder.setAttribute("data-image-id", "uploading");
+      placeholder.setAttribute("alt", "Uploading...");
+      insertNodeAtCursor(placeholder);
+      handleInput();
 
-    dropHandler(file)
-      .then(({ id, width, height, filename }) => {
-        placeholder.setAttribute('data-image-id', id);
-        placeholder.setAttribute('alt', filename);
-        placeholder.setAttribute('width', String(width));
-        placeholder.setAttribute('height', String(height));
-      })
-      .catch((error) => {
-        console.error('Failed to upload dropped image:', error);
-        placeholder.remove();
-      })
-      .finally(() => {
-        onDropCompleteRef.current?.();
-        updateEmptyState();
-        handleInput();
-      });
-  }, [handleInput, updateEmptyState]);
+      dropHandler(file)
+        .then(({ id, width, height, filename }) => {
+          placeholder.setAttribute("data-image-id", id);
+          placeholder.setAttribute("alt", filename);
+          placeholder.setAttribute("width", String(width));
+          placeholder.setAttribute("height", String(height));
+        })
+        .catch((error) => {
+          console.error("Failed to upload dropped image:", error);
+          placeholder.remove();
+        })
+        .finally(() => {
+          onDropCompleteRef.current?.();
+          updateEmptyState();
+          handleInput();
+        });
+    },
+    [handleInput, updateEmptyState],
+  );
 
   const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     if (!isEditableRef.current) return;
     if (!onImageDropRef.current) return;
-    if (event.dataTransfer?.types?.includes('Files')) {
+    if (event.dataTransfer?.types?.includes("Files")) {
       event.preventDefault();
     }
   }, []);
 
   const handleClick = useCallback((event: MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
-    const anchor = target.closest('a');
+    const anchor = target.closest("a");
     if (anchor && anchor.href) {
       event.preventDefault();
-      window.open(anchor.href, '_blank', 'noopener,noreferrer');
+      window.open(anchor.href, "_blank", "noopener,noreferrer");
     }
   }, []);
 
@@ -494,6 +522,6 @@ export function useContentEditableEditor({
     handlePaste,
     handleDrop,
     handleDragOver,
-    handleClick
+    handleClick,
   };
 }
