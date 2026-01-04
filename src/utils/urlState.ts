@@ -42,7 +42,7 @@ export function resolveUrlState(search: string): ResolvedUrlState {
   }
 
   return {
-    state: { view: ViewType.Note, date: today, year: currentYear },
+    state: { view: ViewType.Calendar, date: null, year: currentYear },
     canonicalSearch: '/',
     needsRedirect: false
   };

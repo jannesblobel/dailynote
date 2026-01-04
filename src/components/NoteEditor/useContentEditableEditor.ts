@@ -174,6 +174,10 @@ export function useContentEditableEditor({
       }
       current = current.parentNode;
     }
+
+    if (!currentBlock && el.contains(container)) {
+      currentBlock = el;
+    }
     
     // If we're in a different block than last time (or first edit)
     if (currentBlock && currentBlock !== lastEditedBlockRef.current) {
@@ -186,8 +190,12 @@ export function useContentEditableEditor({
         const timestamp = new Date(now).toISOString();
         const hr = createTimestampHr(timestamp);
         
-        // Insert before the current block element
-        currentBlock.parentNode?.insertBefore(hr, currentBlock);
+        if (currentBlock === el) {
+          el.insertBefore(hr, el.firstChild);
+        } else {
+          // Insert before the current block element
+          currentBlock.parentNode?.insertBefore(hr, currentBlock);
+        }
         
         lastUserInputRef.current = now;
         hasInsertedTimestampRef.current = true;
