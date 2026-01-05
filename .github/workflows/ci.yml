@@ -16,10 +16,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: yarn
 
       - name: Enable Yarn via Corepack
         run: corepack enable && corepack prepare yarn@4.12.0 --activate
+
+      - name: Cache Yarn artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .yarn-cache
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
